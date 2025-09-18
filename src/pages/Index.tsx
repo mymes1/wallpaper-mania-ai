@@ -37,37 +37,37 @@ const Index = () => {
           <TabsContent value="favorites" className="mt-6">
             <WallpaperGallery showFavorites={true} />
           </TabsContent>
+
+          {/* Bottom Navigation */}
+          <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border">
+            <TabsList className="w-full h-16 bg-transparent rounded-none p-0">
+              <TabsTrigger 
+                value="generate" 
+                className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
+              >
+                <Sparkles className="w-5 h-5" />
+                <span className="text-xs">Generate</span>
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="gallery" 
+                className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
+              >
+                <Image className="w-5 h-5" />
+                <span className="text-xs">Gallery</span>
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="favorites" 
+                className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
+              >
+                <Heart className="w-5 h-5" />
+                <span className="text-xs">Favorites</span>
+              </TabsTrigger>
+            </TabsList>
+          </nav>
         </Tabs>
       </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border">
-        <TabsList className="w-full h-16 bg-transparent rounded-none p-0">
-          <TabsTrigger 
-            value="generate" 
-            className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
-          >
-            <Sparkles className="w-5 h-5" />
-            <span className="text-xs">Generate</span>
-          </TabsTrigger>
-          
-          <TabsTrigger 
-            value="gallery" 
-            className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
-          >
-            <Image className="w-5 h-5" />
-            <span className="text-xs">Gallery</span>
-          </TabsTrigger>
-          
-          <TabsTrigger 
-            value="favorites" 
-            className="flex-1 h-full flex-col gap-1 data-[state=active]:bg-gradient-primary/10 data-[state=active]:text-primary"
-          >
-            <Heart className="w-5 h-5" />
-            <span className="text-xs">Favorites</span>
-          </TabsTrigger>
-        </TabsList>
-      </nav>
     </div>
   );
 };
