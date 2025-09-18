@@ -1,18 +1,23 @@
 // Enhanced image generation service with better error handling and fallbacks
-export async function generateImage(prompt: string): Promise<string> {
+export async function generateImage(prompt: string, orientation: 'portrait' | 'landscape' = 'landscape'): Promise<string> {
   try {
     console.log('Generating image for prompt:', prompt);
     
+    // Determine dimensions based on orientation
+    const dimensions = orientation === 'portrait' 
+      ? { width: 1080, height: 1920 }
+      : { width: 1920, height: 1080 };
+
     // Try multiple free AI image generation APIs
     const apis = [
       {
         name: 'Pollinations',
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1920&height=1080&seed=${Math.floor(Math.random() * 1000000)}&model=flux`,
+        url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${dimensions.width}&height=${dimensions.height}&seed=${Math.floor(Math.random() * 1000000)}&model=flux`,
         method: 'GET'
       },
       {
         name: 'Picsum with overlay',
-        url: `https://picsum.photos/1920/1080?random=${Math.floor(Math.random() * 1000)}`,
+        url: `https://picsum.photos/${dimensions.width}/${dimensions.height}?random=${Math.floor(Math.random() * 1000)}`,
         method: 'GET'
       }
     ];
@@ -53,19 +58,23 @@ export async function generateImage(prompt: string): Promise<string> {
 
     // Final fallback to canvas generation
     console.log('Using canvas generation fallback...');
-    return generateCanvasImage(prompt);
+    return generateCanvasImage(prompt, orientation);
   } catch (error) {
     console.error('All image generation methods failed:', error);
-    return generateCanvasImage(prompt);
+    return generateCanvasImage(prompt, orientation);
   }
 }
 
-function generateCanvasImage(prompt: string): string {
+function generateCanvasImage(prompt: string, orientation: 'portrait' | 'landscape' = 'landscape'): string {
   console.log('Generating canvas image for prompt:', prompt);
   
+  const dimensions = orientation === 'portrait' 
+    ? { width: 1080, height: 1920 }
+    : { width: 1920, height: 1080 };
+    
   const canvas = document.createElement('canvas');
-  canvas.width = 1920;
-  canvas.height = 1080;
+  canvas.width = dimensions.width;
+  canvas.height = dimensions.height;
   const ctx = canvas.getContext('2d');
   
   if (!ctx) {
@@ -76,19 +85,19 @@ function generateCanvasImage(prompt: string): string {
   const colors = getColorsFromPrompt(prompt);
   
   // Create animated-style gradient
-  const gradient = ctx.createLinearGradient(0, 0, 1920, 1080);
+  const gradient = ctx.createLinearGradient(0, 0, dimensions.width, dimensions.height);
   colors.forEach((color, index) => {
     gradient.addColorStop(index / (colors.length - 1), color);
   });
 
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 1920, 1080);
+  ctx.fillRect(0, 0, dimensions.width, dimensions.height);
 
   // Add geometric patterns based on prompt
-  addPatterns(ctx, prompt);
+  addPatterns(ctx, prompt, dimensions);
   
   // Add text overlay
-  addTextOverlay(ctx, prompt);
+  addTextOverlay(ctx, prompt, dimensions);
 
   // Add AI-generated indicator
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -103,7 +112,7 @@ function generateCanvasImage(prompt: string): string {
   return canvas.toDataURL('image/png');
 }
 
-function addPatterns(ctx: CanvasRenderingContext2D, prompt: string) {
+function addPatterns(ctx: CanvasRenderingContext2D, prompt: string, dimensions: { width: number; height: number }) {
   const lowerPrompt = prompt.toLowerCase();
   
   // Add circles for space/cosmic themes
@@ -111,8 +120,8 @@ function addPatterns(ctx: CanvasRenderingContext2D, prompt: string) {
     for (let i = 0; i < 150; i++) {
       ctx.beginPath();
       ctx.arc(
-        Math.random() * 1920,
-        Math.random() * 1080,
+        Math.random() * dimensions.width,
+        Math.random() * dimensions.height,
         Math.random() * 4 + 1,
         0,
         2 * Math.PI
@@ -126,7 +135,7 @@ function addPatterns(ctx: CanvasRenderingContext2D, prompt: string) {
   if (lowerPrompt.includes('abstract') || lowerPrompt.includes('geometric')) {
     for (let i = 0; i < 25; i++) {
       ctx.save();
-      ctx.translate(Math.random() * 1920, Math.random() * 1080);
+      ctx.translate(Math.random() * dimensions.width, Math.random() * dimensions.height);
       ctx.rotate(Math.random() * Math.PI * 2);
       
       ctx.beginPath();
@@ -144,7 +153,7 @@ function addPatterns(ctx: CanvasRenderingContext2D, prompt: string) {
       ctx.beginPath();
       ctx.moveTo(0, 200 + i * 100);
       
-      for (let x = 0; x <= 1920; x += 20) {
+      for (let x = 0; x <= dimensions.width; x += 20) {
         const y = 200 + i * 100 + Math.sin(x * 0.01 + i) * 50;
         ctx.lineTo(x, y);
       }
@@ -156,7 +165,7 @@ function addPatterns(ctx: CanvasRenderingContext2D, prompt: string) {
   }
 }
 
-function addTextOverlay(ctx: CanvasRenderingContext2D, prompt: string) {
+function addTextOverlay(ctx: CanvasRenderingContext2D, prompt: string, dimensions: { width: number; height: number }) {
   // Add subtle text overlay
   ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
   ctx.font = 'bold 48px Arial';
@@ -164,19 +173,21 @@ function addTextOverlay(ctx: CanvasRenderingContext2D, prompt: string) {
   
   // Split prompt into words and display key words
   const words = prompt.split(' ').slice(0, 4); // Take first 4 words
-  const maxWidth = 1600;
+  const maxWidth = dimensions.width * 0.8;
+  const centerX = dimensions.width / 2;
+  const startY = dimensions.height * 0.4;
   
   words.forEach((word, index) => {
     const text = word.toUpperCase();
-    const y = 400 + (index * 80);
+    const y = startY + (index * 80);
     
     // Add shadow effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillText(text, 962, y + 2);
+    ctx.fillText(text, centerX + 2, y + 2);
     
     // Add main text
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.fillText(text, 960, y);
+    ctx.fillText(text, centerX, y);
   });
 }
 
