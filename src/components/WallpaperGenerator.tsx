@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, Smartphone, Monitor } from "lucide-react";
 import { toast } from "sonner";
+import { generateImage } from "@/services/ImageService";
 
 interface GeneratedWallpaper {
   id: string;
@@ -37,32 +38,12 @@ export const WallpaperGenerator = () => {
 
     setIsGenerating(true);
     try {
-      // Simulate realistic AI generation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate based on prompt themes for more realistic results
-      const themes = {
-        "forest": "384",
-        "city": "385", 
-        "mountain": "386",
-        "space": "387",
-        "abstract": "388",
-        "nature": "389"
-      };
-      
-      const promptLower = prompt.toLowerCase();
-      let imageId = "390"; // default
-      
-      for (const [theme, id] of Object.entries(themes)) {
-        if (promptLower.includes(theme)) {
-          imageId = id;
-          break;
-        }
-      }
+      // Use the enhanced image generation service
+      const imageUrl = await generateImage(prompt);
       
       const newWallpaper: GeneratedWallpaper = {
         id: Date.now().toString(),
-        url: `https://picsum.photos/id/${imageId}/${orientation === "portrait" ? "1080/1920" : "1920/1080"}`,
+        url: imageUrl,
         prompt,
         orientation,
         createdAt: new Date()
