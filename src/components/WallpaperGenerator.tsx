@@ -37,13 +37,32 @@ export const WallpaperGenerator = () => {
 
     setIsGenerating(true);
     try {
-      // For demo purposes, we'll simulate AI generation
-      // In a real app, this would call your AI service
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Simulate realistic AI generation delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate based on prompt themes for more realistic results
+      const themes = {
+        "forest": "384",
+        "city": "385", 
+        "mountain": "386",
+        "space": "387",
+        "abstract": "388",
+        "nature": "389"
+      };
+      
+      const promptLower = prompt.toLowerCase();
+      let imageId = "390"; // default
+      
+      for (const [theme, id] of Object.entries(themes)) {
+        if (promptLower.includes(theme)) {
+          imageId = id;
+          break;
+        }
+      }
       
       const newWallpaper: GeneratedWallpaper = {
         id: Date.now().toString(),
-        url: `https://picsum.photos/${orientation === "portrait" ? "1080/1920" : "1920/1080"}?random=${Date.now()}`,
+        url: `https://picsum.photos/id/${imageId}/${orientation === "portrait" ? "1080/1920" : "1920/1080"}`,
         prompt,
         orientation,
         createdAt: new Date()
@@ -56,8 +75,9 @@ export const WallpaperGenerator = () => {
       existingWallpapers.unshift(newWallpaper);
       localStorage.setItem("wallpapers", JSON.stringify(existingWallpapers));
       
-      toast.success("Wallpaper generated successfully!");
+      toast.success("🎨 Wallpaper generated successfully!");
     } catch (error) {
+      console.error("Generation error:", error);
       toast.error("Failed to generate wallpaper. Please try again.");
     } finally {
       setIsGenerating(false);
