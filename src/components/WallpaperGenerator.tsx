@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Crown, Video, Zap } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Crown, Video, Zap, Key } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
+import { minimaxVideoService } from "@/services/MinimaxVideoService";
 import { PremiumModal } from "@/components/PremiumModal";
+import { ApiKeyModal } from "@/components/ApiKeyModal";
 
 interface GeneratedWallpaper {
   id: string;
@@ -26,6 +28,7 @@ export const WallpaperGenerator = () => {
   const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const promptSuggestions = [
     "Mystical forest with glowing mushrooms",
@@ -48,14 +51,20 @@ export const WallpaperGenerator = () => {
       return;
     }
 
+    // Check if user has API key for video generation
+    if (generationType === "video" && !minimaxVideoService.hasApiKey()) {
+      setShowApiKeyModal(true);
+      return;
+    }
+
     setIsGenerating(true);
     try {
       let contentUrl: string;
       
       if (generationType === "video") {
-        // TODO: Video generation will be implemented when user provides the code
-        toast.info("Video generation coming soon! Using image for now.");
-        contentUrl = await generateImage(prompt, orientation);
+        // Use MiniMax video generation
+        toast.info("🎬 Starting video generation... This may take a few minutes.");
+        contentUrl = await minimaxVideoService.generateVideo(prompt, orientation);
       } else {
         contentUrl = await generateImage(prompt, orientation);
       }
@@ -83,7 +92,14 @@ export const WallpaperGenerator = () => {
       toast.success(successMessage);
     } catch (error) {
       console.error("Generation error:", error);
-      toast.error("Failed to generate wallpaper. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      
+      if (errorMessage.includes("API key")) {
+        toast.error("API key issue. Please check your MiniMax API key.");
+        setShowApiKeyModal(true);
+      } else {
+        toast.error(`Failed to generate wallpaper: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -93,6 +109,15 @@ export const WallpaperGenerator = () => {
     setIsPremium(true);
     setShowPremiumModal(false);
     toast.success("🎉 Welcome to Premium! You can now generate video wallpapers.");
+  };
+
+  const handleApiKeySet = (apiKey: string) => {
+    minimaxVideoService.setApiKey(apiKey);
+    setShowApiKeyModal(false);
+    // If user was trying to generate video, start the process
+    if (generationType === "video" && prompt.trim()) {
+      setTimeout(() => generateWallpaper(), 500);
+    }
   };
 
   return (
@@ -148,6 +173,8 @@ export const WallpaperGenerator = () => {
                 onClick={() => {
                   if (!isPremium) {
                     setShowPremiumModal(true);
+                  } else if (!minimaxVideoService.hasApiKey()) {
+                    setShowApiKeyModal(true);
                   } else {
                     setGenerationType("video");
                   }
@@ -158,6 +185,9 @@ export const WallpaperGenerator = () => {
                 Video
                 {!isPremium && (
                   <Crown className="w-3 h-3 ml-1 text-yellow-400" />
+                )}
+                {isPremium && !minimaxVideoService.hasApiKey() && (
+                  <Key className="w-3 h-3 ml-1 text-blue-400" />
                 )}
               </Button>
             </div>
@@ -320,6 +350,13 @@ export const WallpaperGenerator = () => {
         isOpen={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
         onUpgrade={handlePremiumUpgrade}
+      />
+
+      {/* API Key Modal */}
+      <ApiKeyModal
+        isOpen={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+        onApiKeySet={handleApiKeySet}
       />
     </div>
   );

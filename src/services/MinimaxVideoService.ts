@@ -1,0 +1,197 @@
+interface VideoGenerationRequest {
+  prompt: string;
+  model: string;
+  duration: number;
+  resolution: string;
+}
+
+interface VideoGenerationResponse {
+  task_id: string;
+  status: string;
+}
+
+interface VideoQueryResponse {
+  status: 'Preparing' | 'Queueing' | 'Processing' | 'Success' | 'Fail';
+  file_id?: string;
+}
+
+interface VideoFileResponse {
+  file: {
+    download_url: string;
+  };
+}
+
+export class MinimaxVideoService {
+  private static instance: MinimaxVideoService;
+  private apiKey: string | null = null;
+
+  constructor() {
+    // Try to get API key from localStorage
+    this.apiKey = localStorage.getItem('minimax_api_key');
+  }
+
+  static getInstance(): MinimaxVideoService {
+    if (!MinimaxVideoService.instance) {
+      MinimaxVideoService.instance = new MinimaxVideoService();
+    }
+    return MinimaxVideoService.instance;
+  }
+
+  setApiKey(apiKey: string): void {
+    this.apiKey = apiKey;
+    localStorage.setItem('minimax_api_key', apiKey);
+  }
+
+  hasApiKey(): boolean {
+    return !!this.apiKey;
+  }
+
+  async generateVideo(
+    prompt: string, 
+    orientation: 'portrait' | 'landscape' = 'landscape'
+  ): Promise<string> {
+    if (!this.apiKey) {
+      throw new Error('MiniMax API key is required. Please set it first.');
+    }
+
+    try {
+      console.log("-----------------Submit video generation task-----------------");
+      
+      // Submit video generation task
+      const taskId = await this.invokeVideoGeneration(prompt, orientation);
+      console.log("Video generation task submitted successfully, task ID:", taskId);
+
+      // Poll for completion
+      const fileId = await this.pollVideoGeneration(taskId);
+      
+      // Fetch and return video URL
+      const videoUrl = await this.fetchVideoResult(fileId);
+      console.log("---------------Successful---------------");
+      
+      return videoUrl;
+    } catch (error) {
+      console.error("Video generation failed:", error);
+      throw new Error(`Video generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async invokeVideoGeneration(prompt: string, orientation: 'portrait' | 'landscape'): Promise<string> {
+    const resolution = orientation === 'portrait' ? '720P' : '1080P'; // Adjust as needed
+    
+    const payload: VideoGenerationRequest = {
+      prompt: prompt,
+      model: "MiniMax-Hailuo-02",
+      duration: 6,
+      resolution: resolution
+    };
+
+    const response = await fetch("https://api.minimax.io/v1/video_generation", {
+      method: "POST",
+      headers: {
+        'authorization': `Bearer ${this.apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} ${errorText}`);
+    }
+
+    const result: VideoGenerationResponse = await response.json();
+    return result.task_id;
+  }
+
+  private async queryVideoGeneration(taskId: string): Promise<{ fileId: string; status: string }> {
+    const response = await fetch(`https://api.minimax.io/v1/query/video_generation?task_id=${taskId}`, {
+      method: "GET",
+      headers: {
+        'authorization': `Bearer ${this.apiKey}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Query failed: ${response.status}`);
+    }
+
+    const result: VideoQueryResponse = await response.json();
+    
+    switch (result.status) {
+      case 'Preparing':
+        console.log("...Preparing...");
+        return { fileId: "", status: 'Preparing' };
+      case 'Queueing':
+        console.log("...In the queue...");
+        return { fileId: "", status: 'Queueing' };
+      case 'Processing':
+        console.log("...Generating...");
+        return { fileId: "", status: 'Processing' };
+      case 'Success':
+        return { fileId: result.file_id || "", status: "Finished" };
+      case 'Fail':
+        return { fileId: "", status: "Fail" };
+      default:
+        return { fileId: "", status: "Unknown" };
+    }
+  }
+
+  private async pollVideoGeneration(taskId: string): Promise<string> {
+    const maxAttempts = 60; // 10 minutes max (10 seconds * 60)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      await this.sleep(10000); // Wait 10 seconds
+      attempts++;
+
+      const { fileId, status } = await this.queryVideoGeneration(taskId);
+      
+      if (fileId) {
+        return fileId;
+      } else if (status === "Fail" || status === "Unknown") {
+        throw new Error(`Video generation failed with status: ${status}`);
+      }
+      
+      // Continue polling for other statuses
+    }
+
+    throw new Error("Video generation timeout - exceeded maximum wait time");
+  }
+
+  private async fetchVideoResult(fileId: string): Promise<string> {
+    console.log("---------------Video generated successfully, downloading now---------------");
+    
+    const response = await fetch(`https://api.minimax.io/v1/files/retrieve?file_id=${fileId}`, {
+      method: "GET",
+      headers: {
+        'authorization': `Bearer ${this.apiKey}`,
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`File retrieval failed: ${response.status}`);
+    }
+
+    const result: VideoFileResponse = await response.json();
+    const downloadUrl = result.file.download_url;
+    
+    console.log("Video download link:", downloadUrl);
+    
+    // Download the video and create a blob URL
+    const videoResponse = await fetch(downloadUrl);
+    if (!videoResponse.ok) {
+      throw new Error(`Video download failed: ${videoResponse.status}`);
+    }
+
+    const videoBlob = await videoResponse.blob();
+    const videoUrl = URL.createObjectURL(videoBlob);
+    
+    return videoUrl;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+export const minimaxVideoService = MinimaxVideoService.getInstance();
