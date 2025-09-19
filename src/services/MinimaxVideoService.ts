@@ -107,11 +107,11 @@ export class MinimaxVideoService {
       resolution: resolution
     };
 
-    const response = await fetch("https://api.minimax.io/v1/video_generation", {
+    const response = await fetch(`https://api.minimax.chat/v1/video_generation?GroupId=${this.groupId}`, {
       method: "POST",
       headers: {
-        'authorization': `Bearer ${this.apiKey}`,
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload)
     });
@@ -133,10 +133,10 @@ export class MinimaxVideoService {
   }
 
   private async queryVideoGeneration(taskId: string): Promise<{ fileId: string; status: string }> {
-    const response = await fetch(`https://api.minimax.io/v1/query/video_generation?task_id=${taskId}`, {
+    const response = await fetch(`https://api.minimax.chat/v1/query/video_generation?task_id=${taskId}&GroupId=${this.groupId}`, {
       method: "GET",
       headers: {
-        'authorization': `Bearer ${this.apiKey}`
+        'Authorization': `Bearer ${this.apiKey}`
       }
     });
 
@@ -200,10 +200,10 @@ export class MinimaxVideoService {
   private async fetchVideoResult(fileId: string): Promise<string> {
     console.log("---------------Video generated successfully, downloading now---------------");
     
-    const response = await fetch(`https://api.minimax.io/v1/files/retrieve?file_id=${fileId}`, {
+    const response = await fetch(`https://api.minimax.chat/v1/files/retrieve?file_id=${fileId}&GroupId=${this.groupId}`, {
       method: "GET",
       headers: {
-        'authorization': `Bearer ${this.apiKey}`,
+        'Authorization': `Bearer ${this.apiKey}`,
       }
     });
 
