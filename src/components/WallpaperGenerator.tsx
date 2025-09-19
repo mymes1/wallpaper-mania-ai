@@ -3,12 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Crown, Video, Zap, Key, Coins, Download } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Video, Key, Coins, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
 import { minimaxVideoService } from "@/services/MinimaxVideoService";
 import { TokenService } from "@/services/TokenService";
-import { PremiumModal } from "@/components/PremiumModal";
 import { ApiKeyModal } from "@/components/ApiKeyModal";
 
 interface GeneratedWallpaper {
@@ -27,8 +26,6 @@ export const WallpaperGenerator = () => {
   const [generationType, setGenerationType] = useState<"image" | "video">("image");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const promptSuggestions = [
@@ -46,12 +43,6 @@ export const WallpaperGenerator = () => {
       return;
     }
 
-    // Check if user is trying to generate video without premium
-    if (generationType === "video" && !isPremium) {
-      setShowPremiumModal(true);
-      return;
-    }
-
     // Check if user has API key for video generation
     if (generationType === "video" && !minimaxVideoService.hasApiKey()) {
       setShowApiKeyModal(true);
@@ -59,9 +50,8 @@ export const WallpaperGenerator = () => {
     }
 
     // Check tokens for image generation
-    if (generationType === "image" && !TokenService.canGenerateImage(isPremium)) {
-      toast.error("Not enough tokens! You need 50 tokens per image. Upgrade to Premium for unlimited tokens.");
-      setShowPremiumModal(true);
+    if (generationType === "image" && !TokenService.canGenerateImage(false)) {
+      toast.error("Not enough tokens! You need 50 tokens per image. You'll get 500 fresh tokens tomorrow.");
       return;
     }
 
@@ -75,7 +65,7 @@ export const WallpaperGenerator = () => {
         contentUrl = await minimaxVideoService.generateVideo(prompt, orientation);
       } else {
         // Use tokens for image generation
-        if (!TokenService.useTokensForImage(isPremium)) {
+        if (!TokenService.useTokensForImage(false)) {
           toast.error("Failed to use tokens. Please try again.");
           return;
         }
@@ -88,8 +78,7 @@ export const WallpaperGenerator = () => {
         prompt,
         orientation,
         type: generationType,
-        createdAt: new Date(),
-        isPremium: generationType === "video"
+        createdAt: new Date()
       };
 
       setGeneratedWallpaper(newWallpaper);
@@ -108,7 +97,7 @@ export const WallpaperGenerator = () => {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       
       if (errorMessage.includes("API key")) {
-        toast.error("API key issue. Please check your MiniMax API key.");
+        toast.error("API key needed for video generation. Please add your MiniMax API key.");
         setShowApiKeyModal(true);
       } else {
         toast.error(`Failed to generate wallpaper: ${errorMessage}`);
@@ -118,15 +107,11 @@ export const WallpaperGenerator = () => {
     }
   };
 
-  const handlePremiumUpgrade = () => {
-    setIsPremium(true);
-    setShowPremiumModal(false);
-    toast.success("🎉 Welcome to Premium! You can now generate video wallpapers.");
-  };
 
   const handleApiKeySet = (apiKey: string) => {
     minimaxVideoService.setApiKey(apiKey);
     setShowApiKeyModal(false);
+    toast.success("🎉 API key saved! You can now generate video wallpapers.");
     // If user was trying to generate video, start the process
     if (generationType === "video" && prompt.trim()) {
       setTimeout(() => generateWallpaper(), 500);
@@ -147,23 +132,14 @@ export const WallpaperGenerator = () => {
         
         {/* Token Status */}
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          {isPremium ? (
-            <Badge className="bg-premium-gradient text-white animate-glow">
-              <Crown className="w-3 h-3 mr-1" />
-              Premium Active
-            </Badge>
-          ) : (
-            <>
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Coins className="w-3 h-3" />
-                {TokenService.getRemainingTokens(false)} tokens left
-              </Badge>
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Download className="w-3 h-3" />
-                {TokenService.getRemainingDownloads(false)} downloads left
-              </Badge>
-            </>
-          )}
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Coins className="w-3 h-3" />
+            {TokenService.getRemainingTokens(false)} tokens left
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Download className="w-3 h-3" />
+            {TokenService.getRemainingDownloads(false)} downloads left
+          </Badge>
         </div>
       </div>
 
@@ -192,19 +168,15 @@ export const WallpaperGenerator = () => {
               >
                 <Sparkles className="w-4 h-4" />
                 Image
-                {!isPremium && (
-                  <Badge variant="secondary" className="ml-1 text-xs px-1">
-                    50 tokens
-                  </Badge>
-                )}
+                <Badge variant="secondary" className="ml-1 text-xs px-1">
+                  50 tokens
+                </Badge>
               </Button>
               <Button
                 variant={generationType === "video" ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
-                  if (!isPremium) {
-                    setShowPremiumModal(true);
-                  } else if (!minimaxVideoService.hasApiKey()) {
+                  if (!minimaxVideoService.hasApiKey()) {
                     setShowApiKeyModal(true);
                   } else {
                     setGenerationType("video");
@@ -214,12 +186,12 @@ export const WallpaperGenerator = () => {
               >
                 <Video className="w-4 h-4" />
                 Video
-                {!isPremium && (
-                  <Crown className="w-3 h-3 ml-1 text-yellow-400" />
-                )}
-                {isPremium && !minimaxVideoService.hasApiKey() && (
+                {!minimaxVideoService.hasApiKey() && (
                   <Key className="w-3 h-3 ml-1 text-blue-400" />
                 )}
+                <Badge variant="secondary" className="ml-1 text-xs px-1">
+                  Free
+                </Badge>
               </Button>
             </div>
           </div>
@@ -253,11 +225,7 @@ export const WallpaperGenerator = () => {
           <Button
             onClick={generateWallpaper}
             disabled={isGenerating || !prompt.trim()}
-            className={`w-full text-white shadow-fab transition-all duration-500 ${
-              generationType === "video" && isPremium
-                ? "bg-premium-gradient hover:opacity-90 animate-glow"
-                : "bg-gradient-primary hover:opacity-90"
-            }`}
+            className="w-full bg-gradient-primary hover:opacity-90 text-white shadow-fab transition-all duration-500"
             size="lg"
           >
             {isGenerating ? (
@@ -309,7 +277,7 @@ export const WallpaperGenerator = () => {
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Your Generated Wallpaper</h3>
               <div className="flex items-center gap-2">
-                <Badge className={generatedWallpaper.isPremium ? "bg-premium-gradient text-white" : "bg-gradient-primary text-white"}>
+                <Badge className="bg-gradient-primary text-white">
                   {generatedWallpaper.type === "video" ? (
                     <>
                       <Video className="w-3 h-3 mr-1" />
@@ -319,12 +287,6 @@ export const WallpaperGenerator = () => {
                     generatedWallpaper.orientation
                   )}
                 </Badge>
-                {generatedWallpaper.isPremium && (
-                  <Badge variant="outline" className="border-yellow-400 text-yellow-400">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Premium
-                  </Badge>
-                )}
               </div>
             </div>
             <div className="relative group">
@@ -360,13 +322,12 @@ export const WallpaperGenerator = () => {
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    if (!TokenService.canDownload(isPremium)) {
-                      toast.error("No downloads remaining today! Upgrade to Premium for unlimited downloads.");
-                      setShowPremiumModal(true);
+                    if (!TokenService.canDownload(false)) {
+                      toast.error("No downloads remaining today! You'll get 5 fresh downloads tomorrow.");
                       return;
                     }
                     
-                    if (TokenService.useDownload(isPremium)) {
+                    if (TokenService.useDownload(false)) {
                       const link = document.createElement('a');
                       link.href = generatedWallpaper.url;
                       link.download = `wallpaper-${generatedWallpaper.id}.${generatedWallpaper.type === 'video' ? 'mp4' : 'png'}`;
@@ -384,13 +345,6 @@ export const WallpaperGenerator = () => {
           </div>
         </Card>
       )}
-
-      {/* Premium Modal */}
-      <PremiumModal 
-        isOpen={showPremiumModal}
-        onClose={() => setShowPremiumModal(false)}
-        onUpgrade={handlePremiumUpgrade}
-      />
 
       {/* API Key Modal */}
       <ApiKeyModal

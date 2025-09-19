@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Grid3X3, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Wallpaper {
   id: string;
@@ -181,10 +182,10 @@ export const WallpaperGallery = ({ showFavorites }: WallpaperGalleryProps) => {
               wallpaper={wallpaper}
               onToggleFavorite={toggleFavorite}
               size={gridSize}
-              isPremium={false} // You can make this dynamic based on user state
+              isPremium={false} 
               onPremiumRequired={() => {
-                // Handle premium upgrade prompt
-                console.log("Premium required for this action");
+                // Show token limit message
+                toast.error("Daily limit reached! Come back tomorrow for fresh tokens.");
               }}
             />
           ))}

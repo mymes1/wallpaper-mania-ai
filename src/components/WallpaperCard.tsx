@@ -49,7 +49,7 @@ export const WallpaperCard = ({
   const handleDownload = async () => {
     // Check if user can download
     if (!TokenService.canDownload(isPremium)) {
-      toast.error("No downloads remaining today! Upgrade to Premium for unlimited downloads.");
+      toast.error("No downloads remaining today! You'll get 5 fresh downloads tomorrow.");
       onPremiumRequired?.();
       return;
     }
@@ -130,7 +130,7 @@ export const WallpaperCard = ({
   const handleApplyWallpaper = async () => {
     // Check if user can apply
     if (!TokenService.canDownload(isPremium)) {
-      toast.error("No applies remaining today! Upgrade to Premium for unlimited applies.");
+      toast.error("No applies remaining today! You'll get 5 fresh applies tomorrow.");
       onPremiumRequired?.();
       return;
     }
@@ -251,20 +251,16 @@ export const WallpaperCard = ({
                 <DropdownMenuItem onClick={handleApplyWallpaper}>
                   <Smartphone className="w-4 h-4 mr-2" />
                   Apply Wallpaper
-                  {!isPremium && (
-                    <Badge variant="outline" className="ml-auto text-xs">
-                      Uses 1 apply
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    Uses 1 apply
+                  </Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
-                  {!isPremium && (
-                    <Badge variant="outline" className="ml-auto text-xs">
-                      Uses 1 download
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    Uses 1 download
+                  </Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShare}>
                   <Share2 className="w-4 h-4 mr-2" />
