@@ -34,9 +34,10 @@ export async function generateImage(prompt: string, orientation: 'portrait' | 'l
       
       if (response.ok) {
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        // Convert blob to base64 data URL for persistent storage
+        const dataUrl = await blobToDataUrl(blob);
         console.log('Pollinations API success');
-        return url;
+        return dataUrl;
       }
     } catch (error) {
       console.log('Pollinations API failed:', error);
@@ -48,9 +49,10 @@ export async function generateImage(prompt: string, orientation: 'portrait' | 'l
       const response = await fetch(apis[1].url);
       if (response.ok) {
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        // Convert blob to base64 data URL for persistent storage
+        const dataUrl = await blobToDataUrl(blob);
         console.log('Picsum API success');
-        return url;
+        return dataUrl;
       }
     } catch (error) {
       console.log('Picsum API failed:', error);
@@ -236,4 +238,14 @@ function getColorsFromPrompt(prompt: string): string[] {
 
   // Default gradient colors
   return ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
+}
+
+// Helper function to convert blob to data URL
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }

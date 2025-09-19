@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { TokenService } from "@/services/TokenService";
 
 interface Wallpaper {
   id: string;
@@ -31,52 +32,124 @@ interface WallpaperCardProps {
   wallpaper: Wallpaper;
   onToggleFavorite: (id: string) => void;
   size?: "small" | "large";
+  isPremium?: boolean;
+  onPremiumRequired?: () => void;
 }
 
-export const WallpaperCard = ({ wallpaper, onToggleFavorite, size = "small" }: WallpaperCardProps) => {
+export const WallpaperCard = ({ 
+  wallpaper, 
+  onToggleFavorite, 
+  size = "small", 
+  isPremium = false,
+  onPremiumRequired 
+}: WallpaperCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleDownload = async () => {
+    // Check if user can download
+    if (!TokenService.canDownload(isPremium)) {
+      toast.error("No downloads remaining today! Upgrade to Premium for unlimited downloads.");
+      onPremiumRequired?.();
+      return;
+    }
+
     try {
-      const response = await fetch(wallpaper.url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `wallpaper-${wallpaper.id}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success("Wallpaper downloaded!");
+      // For data URLs (base64), we can directly use them
+      if (wallpaper.url.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = wallpaper.url;
+        link.download = `wallpaper-${wallpaper.id}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For regular URLs, fetch and download
+        const response = await fetch(wallpaper.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `wallpaper-${wallpaper.id}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      }
+      
+      // Use download token
+      if (TokenService.useDownload(isPremium)) {
+        toast.success("Wallpaper downloaded!");
+      }
     } catch (error) {
+      console.error('Download error:', error);
       toast.error("Failed to download wallpaper");
     }
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Amazing AI Wallpaper',
-          text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-          url: wallpaper.url,
-        });
+    try {
+      // For mobile sharing
+      if (navigator.share) {
+        if (wallpaper.url.startsWith('data:')) {
+          // For base64 images, we need to convert to blob first
+          const response = await fetch(wallpaper.url);
+          const blob = await response.blob();
+          const file = new File([blob], `wallpaper-${wallpaper.id}.png`, { type: 'image/png' });
+          
+          await navigator.share({
+            title: 'Amazing AI Wallpaper',
+            text: `Check out this wallpaper: "${wallpaper.prompt}"`,
+            files: [file]
+          });
+        } else {
+          await navigator.share({
+            title: 'Amazing AI Wallpaper',
+            text: `Check out this wallpaper: "${wallpaper.prompt}"`,
+            url: wallpaper.url,
+          });
+        }
         toast.success("Wallpaper shared!");
-      } catch (error) {
-        // User cancelled share
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
+        toast.success("Wallpaper info copied to clipboard!");
       }
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(wallpaper.url);
-      toast.success("Link copied to clipboard!");
+    } catch (error) {
+      console.error('Share error:', error);
+      // Fallback for share cancellation or error
+      try {
+        await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
+        toast.success("Wallpaper info copied to clipboard!");
+      } catch {
+        toast.error("Unable to share wallpaper");
+      }
     }
   };
 
-  const handleApplyWallpaper = () => {
-    // In a real Android app, this would use native APIs
-    toast.info("Apply wallpaper feature coming soon!");
+  const handleApplyWallpaper = async () => {
+    // Check if user can apply
+    if (!TokenService.canDownload(isPremium)) {
+      toast.error("No applies remaining today! Upgrade to Premium for unlimited applies.");
+      onPremiumRequired?.();
+      return;
+    }
+
+    try {
+      // Use download token for apply action
+      if (TokenService.useDownload(isPremium)) {
+        // For Android/iOS, this would integrate with native wallpaper APIs
+        // For now, we'll download and show instructions
+        await handleDownload();
+        toast.success("Wallpaper ready! Set it manually in your device settings.", {
+          duration: 5000,
+          description: "Go to Settings > Display > Wallpaper to apply"
+        });
+      }
+    } catch (error) {
+      console.error('Apply wallpaper error:', error);
+      toast.error("Failed to apply wallpaper");
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -178,10 +251,20 @@ export const WallpaperCard = ({ wallpaper, onToggleFavorite, size = "small" }: W
                 <DropdownMenuItem onClick={handleApplyWallpaper}>
                   <Smartphone className="w-4 h-4 mr-2" />
                   Apply Wallpaper
+                  {!isPremium && (
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      Uses 1 apply
+                    </Badge>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
+                  {!isPremium && (
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      Uses 1 download
+                    </Badge>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShare}>
                   <Share2 className="w-4 h-4 mr-2" />

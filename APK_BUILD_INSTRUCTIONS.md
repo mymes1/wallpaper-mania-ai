@@ -1,17 +1,18 @@
-# 📱 Building APK for Wallpaper Mania AI
+# 📱 APK Build Instructions for Wallpaper Mania AI
 
 ## Prerequisites
-- Android Studio installed
-- Node.js and npm/yarn installed
-- Java Development Kit (JDK) 17 or higher
+- **Android Studio** installed on your computer
+- **Java Development Kit (JDK) 11 or higher**
+- **Git** installed on your system
+- **Node.js** and **npm** installed
 
-## Step-by-Step Instructions
+## Step-by-Step Build Process
 
-### 1. Export & Setup Project
-1. **Export to GitHub**: Use the "Export to Github" button in Lovable
-2. **Clone your repository**:
+### 1. Export and Clone Project
+1. Click the **"Export to GitHub"** button in the Lovable interface
+2. Clone your project from GitHub:
    ```bash
-   git clone <your-github-repo-url>
+   git clone [YOUR_GITHUB_REPO_URL]
    cd wallpaper-mania-ai
    ```
 
@@ -25,82 +26,133 @@ npm install
 npx cap add android
 ```
 
-### 4. Update Native Platform
-```bash
-npx cap update android
-```
-
-### 5. Build Web Assets
+### 4. Build the Web App
 ```bash
 npm run build
 ```
 
-### 6. Sync with Native Platform
+### 5. Sync with Capacitor
 ```bash
 npx cap sync android
 ```
 
-### 7. Open in Android Studio
+### 6. Open in Android Studio
 ```bash
 npx cap open android
 ```
 
-### 8. Build APK in Android Studio
-1. Android Studio will open automatically
-2. Wait for Gradle sync to complete
-3. Go to **Build** → **Build Bundle(s) / APK(s)** → **Build APK(s)**
-4. Once build completes, click **locate** to find your APK file
+### 7. Build APK in Android Studio
 
-### 9. Alternative: Command Line Build
-If you prefer command line:
+#### Option A: Debug APK (for testing)
+1. In Android Studio menu: **Build → Build Bundle(s) / APK(s) → Build APK(s)**
+2. Wait for build to complete
+3. Click **"locate"** in the notification to find your APK
+4. APK location: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### Option B: Release APK (for distribution)
+1. **Generate Signing Key** (first time only):
+   ```bash
+   keytool -genkey -v -keystore wallpaper-mania-release-key.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias wallpaper-mania
+   ```
+
+2. **Create/Edit `android/key.properties`**:
+   ```properties
+   storePassword=your_store_password
+   keyPassword=your_key_password
+   keyAlias=wallpaper-mania
+   storeFile=../wallpaper-mania-release-key.keystore
+   ```
+
+3. **Build Release APK**:
+   - In Android Studio: **Build → Generate Signed Bundle / APK**
+   - Choose **APK**
+   - Select your keystore file
+   - Enter passwords
+   - Choose **release** build variant
+   - Click **Finish**
+
+### 8. Install APK on Device
 ```bash
-cd android
-./gradlew assembleDebug
+adb install android/app/build/outputs/apk/debug/app-debug.apk
 ```
-Your APK will be in: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-## 🔧 Configuration Details
+## Advanced Configuration
 
-### App Information
-- **App ID**: `app.lovable.1193acfd627e4904b59858f33743c0c4`
-- **App Name**: `wallpaper-mania-ai`
+### App Details
+- **App ID**: `app.lovable.wallpaper.mania`
+- **App Name**: `Wallpaper Mania AI`
 - **Package Name**: Same as App ID
 
-### Hot Reload (Development)
-The app is configured to load from Lovable's preview URL for development:
-- URL: `https://1193acfd-627e-4904-b598-58f33743c0c4.lovableproject.com?forceHideBadge=true`
-- This allows real-time updates during development
+### App Icons and Splash Screen
+1. Replace icons in `android/app/src/main/res/` directories
+2. Update `android/app/src/main/res/values/strings.xml` for app name
+3. Run `npx cap sync android` after changes
 
-### For Production Build
-1. Update `capacitor.config.ts` to remove the `server` configuration
-2. Run `npm run build` and `npx cap sync` before building APK
+### Permissions (already configured)
+The app includes these permissions in `android/app/src/main/AndroidManifest.xml`:
+- `INTERNET` - for AI image generation
+- `WRITE_EXTERNAL_STORAGE` - for saving wallpapers
+- `READ_EXTERNAL_STORAGE` - for reading saved wallpapers
 
-## 📋 Troubleshooting
+### Troubleshooting
 
-### Common Issues:
-1. **Gradle Build Failed**: Update Android SDK and Build Tools in Android Studio
-2. **Java Version Issues**: Ensure JDK 17 is installed and set in Android Studio
-3. **Permission Errors**: Run Android Studio as administrator if needed
+#### Build Errors
+- **Gradle sync issues**: File → Sync Project with Gradle Files
+- **SDK issues**: Tools → SDK Manager → install required SDKs
+- **Java version**: Ensure using JDK 11+
 
-### Dependencies Required:
-- **Android SDK**: API level 24 or higher (Android 7.0+)
-- **Build Tools**: Latest version
-- **Gradle**: Will be handled automatically
+#### Runtime Issues
+- **Network errors**: Check internet connection and API keys
+- **Storage issues**: Grant storage permissions in device settings
 
-## 🚀 Testing Your APK
-1. Enable "Unknown Sources" in Android settings
-2. Install the APK on your device
-3. Test all features including:
-   - Image generation
-   - Gallery functionality
-   - Premium features
-   - Orientation changes
+## Testing on Physical Device
 
-## 📚 Additional Resources
-- [Capacitor Android Documentation](https://capacitorjs.com/docs/android)
-- [Android Studio Setup Guide](https://developer.android.com/studio/install)
-- [Lovable Mobile Capabilities Blog](https://lovable.dev/blogs/TODO)
+### Enable Developer Options
+1. Go to **Settings → About Phone**
+2. Tap **Build Number** 7 times
+3. Enable **USB Debugging** in **Developer Options**
 
----
+### Install via USB
+1. Connect device via USB
+2. Run: `adb devices` (should show your device)
+3. Run: `adb install [path-to-your-apk]`
 
-**Note**: Always test your APK thoroughly before distributing. For production releases, consider using Android App Bundle (.aab) instead of APK for better optimization.
+## App Store Deployment
+
+### Google Play Store
+1. Create Developer Account ($25 one-time fee)
+2. Build **Release APK** or **AAB** (Android App Bundle)
+3. Upload to Play Console
+4. Complete store listing
+5. Submit for review
+
+### Key Features Included
+- ✅ AI wallpaper generation with multiple APIs
+- ✅ Token-based usage system (500 daily tokens for free users)
+- ✅ Premium features (unlimited tokens, video generation)
+- ✅ Gallery with search and filtering
+- ✅ Download and share functionality with usage limits
+- ✅ Apply wallpaper feature with usage tracking
+- ✅ Favorites system
+- ✅ Responsive design for all screen sizes
+- ✅ Persistent storage using base64 data URLs
+
+## Fixed Issues in This Version
+- ✅ **Gallery black images**: Fixed by using base64 data URLs instead of temporary blob URLs
+- ✅ **Download/Apply limits**: Implemented token-based system with daily limits
+- ✅ **Share functionality**: Enhanced with mobile-native sharing and clipboard fallback
+- ✅ **APK configuration**: Updated with proper app ID and mobile optimizations
+
+## Final Notes
+- **First APK build may take 10-15 minutes**
+- **Keep your signing key secure** - you'll need it for updates
+- **Test thoroughly** on different devices before publishing
+- **The app is configured for live reload during development**
+
+For production deployment:
+1. Remove the development server URL from `capacitor.config.ts`
+2. Build the production version: `npm run build`
+3. Sync: `npx cap sync android`
+4. Build release APK with signing
+
+Happy building! 🚀

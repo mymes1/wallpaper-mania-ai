@@ -181,6 +181,11 @@ export const WallpaperGallery = ({ showFavorites }: WallpaperGalleryProps) => {
               wallpaper={wallpaper}
               onToggleFavorite={toggleFavorite}
               size={gridSize}
+              isPremium={false} // You can make this dynamic based on user state
+              onPremiumRequired={() => {
+                // Handle premium upgrade prompt
+                console.log("Premium required for this action");
+              }}
             />
           ))}
         </div>
