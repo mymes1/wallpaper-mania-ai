@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Crown, Video, Zap, Key } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Crown, Video, Zap, Key, Coins, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
 import { minimaxVideoService } from "@/services/MinimaxVideoService";
+import { TokenService } from "@/services/TokenService";
 import { PremiumModal } from "@/components/PremiumModal";
 import { ApiKeyModal } from "@/components/ApiKeyModal";
 
@@ -57,6 +58,13 @@ export const WallpaperGenerator = () => {
       return;
     }
 
+    // Check tokens for image generation
+    if (generationType === "image" && !TokenService.canGenerateImage(isPremium)) {
+      toast.error("Not enough tokens! You need 50 tokens per image. Upgrade to Premium for unlimited tokens.");
+      setShowPremiumModal(true);
+      return;
+    }
+
     setIsGenerating(true);
     try {
       let contentUrl: string;
@@ -66,6 +74,11 @@ export const WallpaperGenerator = () => {
         toast.info("🎬 Starting video generation... This may take a few minutes.");
         contentUrl = await minimaxVideoService.generateVideo(prompt, orientation);
       } else {
+        // Use tokens for image generation
+        if (!TokenService.useTokensForImage(isPremium)) {
+          toast.error("Failed to use tokens. Please try again.");
+          return;
+        }
         contentUrl = await generateImage(prompt, orientation);
       }
       
@@ -132,13 +145,26 @@ export const WallpaperGenerator = () => {
           Describe your dream wallpaper and watch AI bring it to life in seconds
         </p>
         
-        {/* Premium Status */}
-        {isPremium && (
-          <Badge className="bg-premium-gradient text-white animate-glow">
-            <Crown className="w-3 h-3 mr-1" />
-            Premium Active
-          </Badge>
-        )}
+        {/* Token Status */}
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          {isPremium ? (
+            <Badge className="bg-premium-gradient text-white animate-glow">
+              <Crown className="w-3 h-3 mr-1" />
+              Premium Active
+            </Badge>
+          ) : (
+            <>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Coins className="w-3 h-3" />
+                {TokenService.getRemainingTokens(false)} tokens left
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Download className="w-3 h-3" />
+                {TokenService.getRemainingDownloads(false)} downloads left
+              </Badge>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Generation Form */}
@@ -166,6 +192,11 @@ export const WallpaperGenerator = () => {
               >
                 <Sparkles className="w-4 h-4" />
                 Image
+                {!isPremium && (
+                  <Badge variant="secondary" className="ml-1 text-xs px-1">
+                    50 tokens
+                  </Badge>
+                )}
               </Button>
               <Button
                 variant={generationType === "video" ? "default" : "outline"}
@@ -329,10 +360,19 @@ export const WallpaperGenerator = () => {
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = generatedWallpaper.url;
-                    link.download = `wallpaper-${generatedWallpaper.id}.${generatedWallpaper.type === 'video' ? 'mp4' : 'png'}`;
-                    link.click();
+                    if (!TokenService.canDownload(isPremium)) {
+                      toast.error("No downloads remaining today! Upgrade to Premium for unlimited downloads.");
+                      setShowPremiumModal(true);
+                      return;
+                    }
+                    
+                    if (TokenService.useDownload(isPremium)) {
+                      const link = document.createElement('a');
+                      link.href = generatedWallpaper.url;
+                      link.download = `wallpaper-${generatedWallpaper.id}.${generatedWallpaper.type === 'video' ? 'mp4' : 'png'}`;
+                      link.click();
+                      toast.success("Wallpaper downloaded!");
+                    }
                   }}
                   className="animate-scale-in"
                 >

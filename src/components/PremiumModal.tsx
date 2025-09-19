@@ -30,18 +30,18 @@ export const PremiumModal = ({ isOpen, onClose, onUpgrade }: PremiumModalProps) 
     },
     {
       icon: Zap,
-      title: "Faster Generation",
-      description: "Priority processing for instant results"
-    },
-    {
-      icon: Sparkles,
-      title: "Premium Models",
-      description: "Access to advanced AI models for better quality"
+      title: "Unlimited Tokens",
+      description: "Generate as many wallpapers as you want"
     },
     {
       icon: Crown,
       title: "Unlimited Downloads",
-      description: "No limits on wallpaper generation and downloads"
+      description: "Save and apply wallpapers without daily limits"
+    },
+    {
+      icon: Sparkles,
+      title: "Priority Support",
+      description: "Get help and new features first"
     }
   ];
 
