@@ -3,12 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Video, Key, Coins, Download } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Video, Coins, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
 import { minimaxVideoService } from "@/services/MinimaxVideoService";
 import { TokenService } from "@/services/TokenService";
-import { ApiKeyModal } from "@/components/ApiKeyModal";
 
 interface GeneratedWallpaper {
   id: string;
@@ -26,7 +25,6 @@ export const WallpaperGenerator = () => {
   const [generationType, setGenerationType] = useState<"image" | "video">("image");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const promptSuggestions = [
     "Mystical forest with glowing mushrooms",
@@ -40,12 +38,6 @@ export const WallpaperGenerator = () => {
   const generateWallpaper = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a prompt to generate a wallpaper");
-      return;
-    }
-
-    // Check if user has API key for video generation
-    if (generationType === "video" && !minimaxVideoService.hasApiKey()) {
-      setShowApiKeyModal(true);
       return;
     }
 
@@ -95,26 +87,9 @@ export const WallpaperGenerator = () => {
     } catch (error) {
       console.error("Generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      
-      if (errorMessage.includes("API key")) {
-        toast.error("API key needed for video generation. Please add your MiniMax API key.");
-        setShowApiKeyModal(true);
-      } else {
-        toast.error(`Failed to generate wallpaper: ${errorMessage}`);
-      }
+      toast.error(`Failed to generate wallpaper: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-
-  const handleApiKeySet = (apiKey: string) => {
-    minimaxVideoService.setApiKey(apiKey);
-    setShowApiKeyModal(false);
-    toast.success("🎉 API key saved! You can now generate video wallpapers.");
-    // If user was trying to generate video, start the process
-    if (generationType === "video" && prompt.trim()) {
-      setTimeout(() => generateWallpaper(), 500);
     }
   };
 
@@ -175,20 +150,11 @@ export const WallpaperGenerator = () => {
               <Button
                 variant={generationType === "video" ? "default" : "outline"}
                 size="sm"
-                onClick={() => {
-                  if (!minimaxVideoService.hasApiKey()) {
-                    setShowApiKeyModal(true);
-                  } else {
-                    setGenerationType("video");
-                  }
-                }}
+                onClick={() => setGenerationType("video")}
                 className="flex items-center gap-2 transition-all duration-300 relative"
               >
                 <Video className="w-4 h-4" />
                 Video
-                {!minimaxVideoService.hasApiKey() && (
-                  <Key className="w-3 h-3 ml-1 text-blue-400" />
-                )}
                 <Badge variant="secondary" className="ml-1 text-xs px-1">
                   Free
                 </Badge>
@@ -345,13 +311,6 @@ export const WallpaperGenerator = () => {
           </div>
         </Card>
       )}
-
-      {/* API Key Modal */}
-      <ApiKeyModal
-        isOpen={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-        onApiKeySet={handleApiKeySet}
-      />
     </div>
   );
 };

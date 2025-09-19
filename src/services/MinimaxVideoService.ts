@@ -24,10 +24,16 @@ interface VideoFileResponse {
 export class MinimaxVideoService {
   private static instance: MinimaxVideoService;
   private apiKey: string | null = null;
+  private readonly defaultApiKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiVXNlck5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiQWNjb3VudCI6IiIsIlN1YmplY3RJRCI6IjE5Njg2MDM1NDUzMjIxMzE2MjgiLCJQaG9uZSI6IiIsIkdyb3VwSUQiOiIxOTY4NjAzNTQ1MzE3OTQxNDIwIiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiZGVzaGVuLm1jZmFybGFuZUBtYXJpc3Rzai5jby56YSIsIkNyZWF0ZVRpbWUiOiIyMDI1LTA5LTE5IDE1OjM2OjEwIiwiVG9rZW5UeXBlIjoxLCJpc3MiOiJtaW5pbWF4In0.Pd5er27Ui8wRQyD9tQV4KPiuLl23CTNZDZojQwEdmfrHT8Bx5o_KPhmcjVTRvmA-6SD2-F0jx-BD2AuW1_b3-2esNYmlJnkA1a0SAGD6OfFnk8G91bwn_7L";
 
   constructor() {
-    // Try to get API key from localStorage
-    this.apiKey = localStorage.getItem('minimax_api_key');
+    // Try to get API key from localStorage, fallback to default
+    this.apiKey = localStorage.getItem('minimax_api_key') || this.defaultApiKey;
+    
+    // Store the default API key if none exists
+    if (!localStorage.getItem('minimax_api_key')) {
+      localStorage.setItem('minimax_api_key', this.defaultApiKey);
+    }
   }
 
   static getInstance(): MinimaxVideoService {
