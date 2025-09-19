@@ -52,9 +52,9 @@ export const WallpaperGenerator = () => {
       let contentUrl: string;
       
       if (generationType === "video") {
-        // Use MiniMax video generation
+        // Use MiniMax video generation - always landscape for videos
         toast.info("🎬 Starting video generation... This may take a few minutes.");
-        contentUrl = await minimaxVideoService.generateVideo(prompt, orientation);
+        contentUrl = await minimaxVideoService.generateVideo(prompt, "landscape");
       } else {
         // Use tokens for image generation
         if (!TokenService.useTokensForImage(false)) {
@@ -68,7 +68,7 @@ export const WallpaperGenerator = () => {
         id: Date.now().toString(),
         url: contentUrl,
         prompt,
-        orientation,
+        orientation: generationType === "video" ? "landscape" : orientation,
         type: generationType,
         createdAt: new Date()
       };
@@ -162,30 +162,32 @@ export const WallpaperGenerator = () => {
             </div>
           </div>
 
-          {/* Orientation Selection */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Orientation</label>
-            <div className="flex gap-2">
-              <Button
-                variant={orientation === "portrait" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setOrientation("portrait")}
-                className="flex items-center gap-2 transition-all duration-300"
-              >
-                <Smartphone className="w-4 h-4" />
-                Portrait (9:16)
-              </Button>
-              <Button
-                variant={orientation === "landscape" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setOrientation("landscape")}
-                className="flex items-center gap-2 transition-all duration-300"
-              >
-                <Monitor className="w-4 h-4" />
-                Landscape (16:9)
-              </Button>
+{/* Orientation Selection - Only show for images */}
+          {generationType === "image" && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Orientation</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={orientation === "portrait" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setOrientation("portrait")}
+                  className="flex items-center gap-2 transition-all duration-300"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Portrait (9:16)
+                </Button>
+                <Button
+                  variant={orientation === "landscape" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setOrientation("landscape")}
+                  className="flex items-center gap-2 transition-all duration-300"
+                >
+                  <Monitor className="w-4 h-4" />
+                  Landscape (16:9)
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Generate Button */}
           <Button

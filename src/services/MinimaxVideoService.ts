@@ -105,8 +105,15 @@ export class MinimaxVideoService {
       throw new Error(`API request failed: ${response.status} ${errorText}`);
     }
 
-    const result: VideoGenerationResponse = await response.json();
-    return result.task_id;
+    const result: any = await response.json();
+    
+    // Check if the response has an error
+    if (result.base_resp && result.base_resp.status_code !== 1000) {
+      throw new Error(`API Error: ${result.base_resp.status_msg || 'Unknown error'}`);
+    }
+    
+    // Return the task_id from the correct location in the response
+    return result.task_id || result.data?.task_id;
   }
 
   private async queryVideoGeneration(taskId: string): Promise<{ fileId: string; status: string }> {
@@ -121,9 +128,18 @@ export class MinimaxVideoService {
       throw new Error(`Query failed: ${response.status}`);
     }
 
-    const result: VideoQueryResponse = await response.json();
+    const result: any = await response.json();
     
-    switch (result.status) {
+    // Check if the response has an error
+    if (result.base_resp && result.base_resp.status_code !== 1000) {
+      throw new Error(`API Error: ${result.base_resp.status_msg || 'Unknown error'}`);
+    }
+    
+    // Get the actual status from the correct location
+    const status = result.status || result.data?.status;
+    const fileId = result.file_id || result.data?.file_id;
+    
+    switch (status) {
       case 'Preparing':
         console.log("...Preparing...");
         return { fileId: "", status: 'Preparing' };
@@ -134,10 +150,11 @@ export class MinimaxVideoService {
         console.log("...Generating...");
         return { fileId: "", status: 'Processing' };
       case 'Success':
-        return { fileId: result.file_id || "", status: "Finished" };
+        return { fileId: fileId || "", status: "Finished" };
       case 'Fail':
         return { fileId: "", status: "Fail" };
       default:
+        console.log("Unknown status:", status, "Full response:", result);
         return { fileId: "", status: "Unknown" };
     }
   }
