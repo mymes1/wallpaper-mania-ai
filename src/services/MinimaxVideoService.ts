@@ -24,7 +24,7 @@ interface VideoFileResponse {
 export class MinimaxVideoService {
   private static instance: MinimaxVideoService;
   private apiKey: string | null = null;
-  private readonly defaultApiKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiVXNlck5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiQWNjb3VudCI6IiIsIlN1YmplY3RJRCI6IjE5Njg2MDM1NDUzMjIxMzE2MjgiLCJQaG9uZSI6IiIsIkdyb3VwSUQiOiIxOTY4NjAzNTQ1MzE3OTQxNDIwIiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiZGVzaGVuLm1jZmFybGFuZUBtYXJpc3Rzai5jby56YSIsIkNyZWF0ZVRpbWUiOiIyMDI1LTA5LTE5IDE1OjM2OjEwIiwiVG9rZW5UeXBlIjoxLCJpc3MiOiJtaW5pbWF4In0.Pd5er27Ui8wRQyD9tQV4KPiuLl23CTNZDZojQwEdmfrHT8Bx5o_KPhmcjVTRvmA-6SD2-F0jx-BD2AuW1_b3-2esNYmlJnkA1a0SAGD6OfFnk8G91bwn_7L";
+  private readonly defaultApiKey = "";
   private groupId: string | null = null;
   private readonly defaultGroupId = "1968603545317941420";
   private readonly baseUrls = [
@@ -34,16 +34,13 @@ export class MinimaxVideoService {
   private baseUrl: string = this.baseUrls[0];
 
   constructor() {
-    // Try to get API key from localStorage, fallback to default
-    this.apiKey = localStorage.getItem('minimax_api_key') || this.defaultApiKey;
+    // Load from localStorage; do NOT set any default API key
+    this.apiKey = localStorage.getItem('minimax_api_key') || null;
     this.groupId = localStorage.getItem('minimax_group_id') || this.defaultGroupId;
     const storedBaseUrl = localStorage.getItem('minimax_base_url');
     this.baseUrl = storedBaseUrl || this.baseUrls[0]; // default to regional .chat
     
-    // Persist defaults if none exist
-    if (!localStorage.getItem('minimax_api_key')) {
-      localStorage.setItem('minimax_api_key', this.defaultApiKey);
-    }
+    // Persist defaults for non-sensitive values only
     if (!localStorage.getItem('minimax_group_id')) {
       localStorage.setItem('minimax_group_id', this.defaultGroupId);
     }
@@ -65,7 +62,7 @@ export class MinimaxVideoService {
   }
 
   hasApiKey(): boolean {
-    return !!this.apiKey;
+    return typeof this.apiKey === 'string' && this.apiKey.trim().length > 0;
   }
 
   async generateVideo(

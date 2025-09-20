@@ -43,38 +43,8 @@ export const WallpaperGallery = ({ showFavorites }: WallpaperGalleryProps) => {
         } else {
           setWallpapers(parsedWallpapers);
         }
-      } else if (!showFavorites) {
-        // Add some demo wallpapers if no wallpapers exist
-        const demoWallpapers: Wallpaper[] = [
-          {
-            id: "demo1",
-            url: "https://picsum.photos/1080/1920?random=1",
-            prompt: "Mystical forest with glowing mushrooms",
-            orientation: "portrait",
-            createdAt: new Date(),
-            isFavorite: false
-          },
-          {
-            id: "demo2",
-            url: "https://picsum.photos/1920/1080?random=2",
-            prompt: "Cyberpunk city at night",
-            orientation: "landscape",
-            createdAt: new Date(),
-            isFavorite: false
-          },
-          {
-            id: "demo3",
-            url: "https://picsum.photos/1080/1920?random=3",
-            prompt: "Serene mountain lake at sunset",
-            orientation: "portrait",
-            createdAt: new Date(),
-            isFavorite: false
-          }
-        ];
-        setWallpapers(demoWallpapers);
-        localStorage.setItem("wallpapers", JSON.stringify(demoWallpapers));
-      }
-    };
+        }
+     };
 
     loadWallpapers();
     

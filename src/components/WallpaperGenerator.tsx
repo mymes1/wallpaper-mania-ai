@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
 import { minimaxVideoService } from "@/services/MinimaxVideoService";
 import { TokenService } from "@/services/TokenService";
+import { ApiKeyModal } from "@/components/ApiKeyModal";
 
 interface GeneratedWallpaper {
   id: string;
@@ -24,7 +25,8 @@ export const WallpaperGenerator = () => {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
   const [generationType, setGenerationType] = useState<"image" | "video">("image");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
+const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
+const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const promptSuggestions = [
     "Mystical forest with glowing mushrooms",
@@ -41,9 +43,15 @@ export const WallpaperGenerator = () => {
       return;
     }
 
-    // Check tokens for image generation
-    if (generationType === "image" && !TokenService.canGenerateImage(false)) {
-      toast.error("Not enough tokens! You need 50 tokens per image. You'll get 500 fresh tokens tomorrow.");
+    // Check tokens for generation (image or video)
+    if (!TokenService.canGenerateImage(false)) {
+      toast.error("Not enough tokens! You need 50 tokens per generation. You'll get 500 fresh tokens tomorrow.");
+      return;
+    }
+
+    if (generationType === "video" && !minimaxVideoService.hasApiKey()) {
+      toast.error("Please set your MiniMax API key to generate videos.");
+      setIsApiKeyModalOpen(true);
       return;
     }
 
@@ -52,6 +60,11 @@ export const WallpaperGenerator = () => {
       let contentUrl: string;
       
       if (generationType === "video") {
+        // Consume tokens for video generation
+        if (!TokenService.useTokensForImage(false)) {
+          toast.error("Failed to use tokens. Please try again.");
+          return;
+        }
         // Use MiniMax video generation - always landscape for videos
         toast.info("🎬 Starting video generation... This may take a few minutes.");
         contentUrl = await minimaxVideoService.generateVideo(prompt, "landscape");
@@ -156,7 +169,7 @@ export const WallpaperGenerator = () => {
                 <Video className="w-4 h-4" />
                 Video
                 <Badge variant="secondary" className="ml-1 text-xs px-1">
-                  Free
+                  50 tokens
                 </Badge>
               </Button>
             </div>
@@ -313,6 +326,11 @@ export const WallpaperGenerator = () => {
           </div>
         </Card>
       )}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onApiKeySet={(key) => minimaxVideoService.setApiKey(key)}
+      />
     </div>
   );
 };
