@@ -11,6 +11,7 @@ interface Wallpaper {
   url: string;
   prompt: string;
   orientation: "portrait" | "landscape";
+  type?: "image" | "video";
   createdAt: Date;
   isFavorite?: boolean;
 }
@@ -34,6 +35,7 @@ export const WallpaperGallery = ({ showFavorites }: WallpaperGalleryProps) => {
       if (stored) {
         const parsedWallpapers = JSON.parse(stored).map((w: any) => ({
           ...w,
+          type: w.type || 'image',
           createdAt: new Date(w.createdAt),
           isFavorite: favorites.includes(w.id)
         }));

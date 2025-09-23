@@ -101,6 +101,9 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
       console.error("Generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(`Failed to generate wallpaper: ${errorMessage}`);
+      if (generationType === "video" && /login fail|API key|Authorization/i.test(errorMessage)) {
+        setIsApiKeyModalOpen(true);
+      }
     } finally {
       setIsGenerating(false);
     }

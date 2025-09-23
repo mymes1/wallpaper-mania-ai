@@ -24,6 +24,7 @@ interface Wallpaper {
   url: string;
   prompt: string;
   orientation: "portrait" | "landscape";
+  type?: "image" | "video";
   createdAt: Date;
   isFavorite?: boolean;
 }
@@ -55,8 +56,16 @@ export const WallpaperCard = ({
     }
 
     try {
-      // For data URLs (base64), we can directly use them
-      if (wallpaper.url.startsWith('data:')) {
+      if (wallpaper.type === 'video') {
+        // Directly download the video (works with blob: or http(s) URLs)
+        const link = document.createElement('a');
+        link.href = wallpaper.url;
+        link.download = `wallpaper-${wallpaper.id}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (wallpaper.url.startsWith('data:')) {
+        // For data URLs (base64), we can directly use them
         const link = document.createElement('a');
         link.href = wallpaper.url;
         link.download = `wallpaper-${wallpaper.id}.png`;
@@ -64,7 +73,7 @@ export const WallpaperCard = ({
         link.click();
         document.body.removeChild(link);
       } else {
-        // For regular URLs, fetch and download
+        // For regular image URLs, fetch and download
         const response = await fetch(wallpaper.url);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -91,12 +100,28 @@ export const WallpaperCard = ({
     try {
       // For mobile sharing
       if (navigator.share) {
-        if (wallpaper.url.startsWith('data:')) {
+        if (wallpaper.type === 'video') {
+          try {
+            const response = await fetch(wallpaper.url);
+            const blob = await response.blob();
+            const file = new File([blob], `wallpaper-${wallpaper.id}.mp4`, { type: 'video/mp4' });
+            await navigator.share({
+              title: 'Amazing AI Wallpaper',
+              text: `Check out this wallpaper: "${wallpaper.prompt}"`,
+              files: [file]
+            });
+          } catch {
+            await navigator.share({
+              title: 'Amazing AI Wallpaper',
+              text: `Check out this wallpaper: "${wallpaper.prompt}"`,
+              url: wallpaper.url,
+            });
+          }
+        } else if (wallpaper.url.startsWith('data:')) {
           // For base64 images, we need to convert to blob first
           const response = await fetch(wallpaper.url);
           const blob = await response.blob();
           const file = new File([blob], `wallpaper-${wallpaper.id}.png`, { type: 'image/png' });
-          
           await navigator.share({
             title: 'Amazing AI Wallpaper',
             text: `Check out this wallpaper: "${wallpaper.prompt}"`,
@@ -176,14 +201,28 @@ export const WallpaperCard = ({
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gradient-primary/20 animate-pulse rounded-t-lg" />
           )}
-          <img
-            src={wallpaper.url}
-            alt={wallpaper.prompt}
-            className={`w-full h-full object-cover transition-all duration-500 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            } ${isHovered ? 'scale-105' : 'scale-100'}`}
-            onLoad={() => setImageLoaded(true)}
-          />
+          {wallpaper.type === 'video' ? (
+            <video
+              src={wallpaper.url}
+              className={`w-full h-full object-cover transition-all duration-500 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              } ${isHovered ? 'scale-105' : 'scale-100'}`}
+              onLoadedData={() => setImageLoaded(true)}
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              src={wallpaper.url}
+              alt={wallpaper.prompt}
+              className={`w-full h-full object-cover transition-all duration-500 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              } ${isHovered ? 'scale-105' : 'scale-100'}`}
+              onLoad={() => setImageLoaded(true)}
+            />
+          )}
           
           {/* Overlay with actions */}
           <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
