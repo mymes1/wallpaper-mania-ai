@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, Smartphone, Monitor, Video, Coins, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
-import { minimaxVideoService } from "@/services/MinimaxVideoService";
+import { runwayMLVideoService } from "@/services/RunwayMLVideoService";
 import { TokenService } from "@/services/TokenService";
 import { ApiKeyModal } from "@/components/ApiKeyModal";
 
@@ -49,8 +49,8 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
       return;
     }
 
-    if (generationType === "video" && !minimaxVideoService.hasApiKey()) {
-      toast.error("Please set your MiniMax API key to generate videos.");
+    if (generationType === "video" && !runwayMLVideoService.hasApiKey()) {
+      toast.error("Please set your RunwayML API key to generate videos.");
       setIsApiKeyModalOpen(true);
       return;
     }
@@ -65,9 +65,9 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
           toast.error("Failed to use tokens. Please try again.");
           return;
         }
-        // Use MiniMax video generation - always landscape for videos
+        // Use RunwayML video generation - supports both orientations
         toast.info("🎬 Starting video generation... This may take a few minutes.");
-        contentUrl = await minimaxVideoService.generateVideo(prompt, "landscape");
+        contentUrl = await runwayMLVideoService.generateVideo(prompt, orientation === "portrait" ? "portrait" : "landscape");
       } else {
         // Use tokens for image generation
         if (!TokenService.useTokensForImage(false)) {
@@ -81,7 +81,7 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
         id: Date.now().toString(),
         url: contentUrl,
         prompt,
-        orientation: generationType === "video" ? "landscape" : orientation,
+        orientation: generationType === "video" ? orientation : orientation,
         type: generationType,
         createdAt: new Date()
       };
@@ -101,7 +101,7 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
       console.error("Generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(`Failed to generate wallpaper: ${errorMessage}`);
-      if (generationType === "video" && /login fail|API key|Authorization/i.test(errorMessage)) {
+      if (generationType === "video" && /API key|Authorization|Bearer/i.test(errorMessage)) {
         setIsApiKeyModalOpen(true);
       }
     } finally {
@@ -332,7 +332,7 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
       <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
-        onApiKeySet={(key) => minimaxVideoService.setApiKey(key)}
+        onApiKeySet={(key) => runwayMLVideoService.setApiKey(key)}
       />
     </div>
   );

@@ -21,7 +21,7 @@ export const ApiKeyModal = ({ isOpen, onClose, onApiKeySet }: ApiKeyModalProps) 
     e.preventDefault();
     
     if (!apiKey.trim()) {
-      toast.error("Please enter your MiniMax API key");
+      toast.error("Please enter your RunwayML API key");
       return;
     }
 
@@ -54,10 +54,10 @@ export const ApiKeyModal = ({ isOpen, onClose, onApiKeySet }: ApiKeyModalProps) 
           
           <div>
             <DialogTitle className="text-2xl font-bold mb-2">
-              MiniMax API Key Required
+              RunwayML API Key Required
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Enter your MiniMax API key to enable AI video generation
+              Enter your RunwayML API key to enable AI video generation
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -71,7 +71,7 @@ export const ApiKeyModal = ({ isOpen, onClose, onApiKeySet }: ApiKeyModalProps) 
               <Input
                 id="apiKey"
                 type={showApiKey ? "text" : "password"}
-                placeholder="Enter your MiniMax API key..."
+                placeholder="Enter your RunwayML API key..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="pr-10 bg-wallpaper-card-bg border-wallpaper-card-border"
@@ -100,7 +100,7 @@ export const ApiKeyModal = ({ isOpen, onClose, onApiKeySet }: ApiKeyModalProps) 
               How to get your API key:
             </h4>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Visit the MiniMax API platform</li>
+              <li>Visit the RunwayML API platform</li>
               <li>Sign up or log in to your account</li>
               <li>Navigate to API keys section</li>
               <li>Generate a new API key</li>
@@ -111,10 +111,10 @@ export const ApiKeyModal = ({ isOpen, onClose, onApiKeySet }: ApiKeyModalProps) 
               variant="link"
               size="sm"
               className="h-auto p-0 text-xs"
-              onClick={() => window.open('https://api.minimax.io/', '_blank')}
+              onClick={() => window.open('https://runwayml.com/api', '_blank')}
             >
               <ExternalLink className="w-3 h-3 mr-1" />
-              Visit MiniMax API
+              Visit RunwayML API
             </Button>
           </div>
 
