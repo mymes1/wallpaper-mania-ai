@@ -34,8 +34,8 @@ export class MinimaxVideoService {
   private baseUrl: string = this.baseUrls[0];
 
   constructor() {
-    // Load from localStorage; do NOT set any default API key
-    this.apiKey = localStorage.getItem('minimax_api_key') || null;
+    // Load from localStorage with the provided API key
+    this.apiKey = localStorage.getItem('minimax_api_key') || 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiVXNlck5hbWUiOiJEZXNoZW4gTWNmYXJsYW5lIiwiQWNjb3VudCI6IiIsIlN1YmplY3RJRCI6IjE5Njg2MDM1NDUzMjIxMzE2MjgiLCJQaG9uZSI6IiIsIkdyb3VwSUQiOiIxOTY4NjAzNTQ1MzE3OTQxNDIwIiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiZGVzaGVuLm1jZmFybGFuZUBtYXJpc3Rzai5jby56YSIsIkNyZWF0ZVRpbWUiOiIyMDI1LTA5LTIzIDE5OjUyOjQwIiwiVG9rZW5UeXBlIjoxLCJpc3MiOiJtaW5pbWF4In0.yZ8fgIs-Fp9MSpkzm9ssw7BcE7yuBblqbn93zL_WtdQ2w5WPsolifIBypGBJ7SRkyc2gGGvsAUKME7mFSFHAoCtKxfY1D1hCZ_D1Dz_Aj-QAOpXD3GDgZEbTUukdMWC0lzjm6iFubNkYwrxePnI6TOEi28uKh9F7wDgPtUgf-Pof9O4Vwg5Q8z5DvDxvPsX8WEo4gEFEjc3T-Ejj82o2XvZ6wSSuHEl2BsIFijjDTklr-yqMzCgn08uCSvV3cRFjIuHD8f5_4D3j1EV38BleQkcvlEzOzAjgow-h23ntPXd4F3zOLuP4smyYcBHakb_DYeeXNjlHm44Df26X2UdgtA';
     this.groupId = localStorage.getItem('minimax_group_id') || this.defaultGroupId;
     const storedBaseUrl = localStorage.getItem('minimax_base_url');
     this.baseUrl = storedBaseUrl || this.baseUrls[0]; // default to regional .chat
