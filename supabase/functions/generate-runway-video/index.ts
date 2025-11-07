@@ -50,35 +50,28 @@ serve(async (req) => {
       );
     }
 
-    const resolution = orientation === 'portrait' ? '768x1344' : '1344x768';
-    const baseUrl = 'https://api.dev.runwayml.com/v1';
+    const ratio = orientation === 'portrait' ? '768:1344' : '1344:768';
+    const baseUrl = 'https://api.dev.runwayml.com';
 
-    // Start video generation
+    // Start video generation using the SDK-compatible API
     console.log('Starting video generation with prompt:', prompt, 'orientation:', orientation);
     
-    const request: VideoGenerationRequest = {
-      taskType: 'gen3a_turbo',
-      internal: false,
-      options: {
-        name: `AI Video - ${Date.now()}`,
-        seconds: 5,
-        text_prompt: prompt,
-        watermark: false,
-        enhance_prompt: true,
-        resolution: resolution,
-        exploreMode: false
-      }
+    const requestBody = {
+      promptText: prompt,
+      model: 'gen3a_turbo',
+      ratio: ratio,
+      duration: 5,
+      watermark: false
     };
 
-    const createResponse = await fetch(`${baseUrl}/tasks`, {
+    const createResponse = await fetch(`${baseUrl}/v1/text-to-video`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Runway-Version': '2024-09-13'
+        'X-Runway-Version': '2024-11-06'
       },
-      body: JSON.stringify(request)
+      body: JSON.stringify(requestBody)
     });
 
     if (!createResponse.ok) {
@@ -94,7 +87,14 @@ serve(async (req) => {
     }
 
     const createData = await createResponse.json();
-    const taskId = createData.id;
+    const taskId = createData.id || createData.task?.id;
+    if (!taskId) {
+      console.error('No task ID returned:', createData);
+      return new Response(
+        JSON.stringify({ error: 'Failed to get task ID from API response' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     console.log('Video generation task started:', taskId);
 
     // Poll for completion (max 5 minutes)
@@ -102,11 +102,11 @@ serve(async (req) => {
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const queryResponse = await fetch(`${baseUrl}/tasks/${taskId}`, {
+      const queryResponse = await fetch(`${baseUrl}/v1/tasks/${taskId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${runwayApiKey}`,
-          'X-Runway-Version': '2024-09-13'
+          'X-Runway-Version': '2024-11-06'
         }
       });
 
