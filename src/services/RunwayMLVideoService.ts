@@ -80,9 +80,16 @@ export class RunwayMLVideoService {
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Edge function error:', response.status, errorData);
-      throw new Error(`Failed to generate video: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Edge function error:', response.status, errorText);
+      let message = `Failed to generate video: ${response.status}`;
+      try {
+        const parsed = JSON.parse(errorText);
+        if (parsed?.error) {
+          message = parsed.error + (parsed.details ? ` - ${parsed.details}` : '');
+        }
+      } catch {}
+      throw new Error(message);
     }
 
     const data = await response.json();

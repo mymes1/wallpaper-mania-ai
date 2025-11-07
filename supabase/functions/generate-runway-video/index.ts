@@ -75,6 +75,7 @@ serve(async (req) => {
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'X-Runway-Version': '2024-09-13'
       },
       body: JSON.stringify(request)
@@ -84,7 +85,10 @@ serve(async (req) => {
       const errorData = await createResponse.text();
       console.error('RunwayML API error:', createResponse.status, errorData);
       return new Response(
-        JSON.stringify({ error: `RunwayML API error: ${createResponse.status}` }),
+        JSON.stringify({ 
+          error: `RunwayML API error: ${createResponse.status}`,
+          details: errorData
+        }),
         { status: createResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
