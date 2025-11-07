@@ -53,15 +53,14 @@ serve(async (req) => {
     const ratio = orientation === 'portrait' ? '768:1280' : '1280:768';
     const baseUrl = 'https://api.dev.runwayml.com';
 
-    // Start video generation using the SDK-compatible API
+    // Start video generation matching the official SDK structure
     console.log('Starting video generation with prompt:', prompt, 'orientation:', orientation);
     
     const requestBody = {
       promptText: prompt,
-      model: 'gen3a_turbo',
+      model: 'veo3.1',
       ratio: ratio,
-      duration: 5,
-      watermark: false
+      duration: 5
     };
 
     const createUrl = `${baseUrl}/v1/text_to_video`;
