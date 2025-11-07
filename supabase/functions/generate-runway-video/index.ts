@@ -50,7 +50,7 @@ serve(async (req) => {
       );
     }
 
-    const ratio = orientation === 'portrait' ? '768:1344' : '1344:768';
+    const ratio = orientation === 'portrait' ? '768:1280' : '1280:768';
     const baseUrl = 'https://api.dev.runwayml.com';
 
     // Start video generation using the SDK-compatible API
@@ -64,7 +64,10 @@ serve(async (req) => {
       watermark: false
     };
 
-    const createResponse = await fetch(`${baseUrl}/v1/text-to-video`, {
+    const createUrl = `${baseUrl}/v1/text_to_video`;
+    console.log('Runway create URL:', createUrl, 'body:', requestBody);
+
+    const createResponse = await fetch(createUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
@@ -116,16 +119,23 @@ serve(async (req) => {
         throw new Error(`Failed to query task: ${queryResponse.status}`);
       }
 
-      const result: VideoGenerationResponse = await queryResponse.json();
+      const result: VideoGenerationResponse & { output?: string[] } = await queryResponse.json();
       console.log(`Polling attempt ${attempts + 1}: Status = ${result.status}, Progress = ${result.progress}%`);
 
-      if (result.status === 'SUCCEEDED' && result.artifacts && result.artifacts.length > 0) {
-        const videoUrl = result.artifacts[0].url;
-        console.log('Video generation completed:', videoUrl);
-        return new Response(
-          JSON.stringify({ videoUrl }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (result.status === 'SUCCEEDED') {
+        let videoUrl = '';
+        if (result.artifacts && result.artifacts.length > 0) {
+          videoUrl = result.artifacts[0].url;
+        } else if ((result as any).output && (result as any).output.length > 0) {
+          videoUrl = (result as any).output[0];
+        }
+        if (videoUrl) {
+          console.log('Video generation completed:', videoUrl);
+          return new Response(
+            JSON.stringify({ videoUrl }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       if (result.status === 'FAILED') {
