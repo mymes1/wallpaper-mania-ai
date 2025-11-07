@@ -49,12 +49,6 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
       return;
     }
 
-    if (generationType === "video" && !runwayMLVideoService.hasApiKey()) {
-      toast.error("Please set your RunwayML API key to generate videos.");
-      setIsApiKeyModalOpen(true);
-      return;
-    }
-
     setIsGenerating(true);
     try {
       let contentUrl: string;
