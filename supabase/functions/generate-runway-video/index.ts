@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     const resolution = orientation === 'portrait' ? '768x1344' : '1344x768';
-    const baseUrl = 'https://api.runwayml.com/v1';
+    const baseUrl = 'https://api.dev.runwayml.com/v1';
 
     // Start video generation
     console.log('Starting video generation with prompt:', prompt, 'orientation:', orientation);
