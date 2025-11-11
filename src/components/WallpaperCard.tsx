@@ -18,10 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { TokenService } from "@/services/TokenService";
+import { WallpaperService } from "@/services/WallpaperService";
+import { Capacitor } from "@capacitor/core";
 
 interface Wallpaper {
   id: string;
-  url: string;
+  url?: string; // Legacy support
+  base64?: string; // New format
   prompt: string;
   orientation: "portrait" | "landscape";
   type?: "image" | "video";
@@ -47,49 +50,29 @@ export const WallpaperCard = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  const getImageUrl = () => {
+    if (wallpaper.base64) {
+      return WallpaperService.base64ToDataUrl(wallpaper.base64);
+    }
+    return wallpaper.url || '';
+  };
+
   const handleDownload = async () => {
-    // Check if user can download
     if (!TokenService.canDownload(isPremium)) {
       toast.error("No downloads remaining today! You'll get 5 fresh downloads tomorrow.");
       onPremiumRequired?.();
       return;
     }
 
+    if (!TokenService.useDownload(isPremium)) {
+      toast.error("Failed to use download. Please try again.");
+      return;
+    }
+
     try {
-      if (wallpaper.type === 'video') {
-        // Directly download the video (works with blob: or http(s) URLs)
-        const link = document.createElement('a');
-        link.href = wallpaper.url;
-        link.download = `wallpaper-${wallpaper.id}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else if (wallpaper.url.startsWith('data:')) {
-        // For data URLs (base64), we can directly use them
-        const link = document.createElement('a');
-        link.href = wallpaper.url;
-        link.download = `wallpaper-${wallpaper.id}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // For regular image URLs, fetch and download
-        const response = await fetch(wallpaper.url);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `wallpaper-${wallpaper.id}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(link);
-      }
-      
-      // Use download token
-      if (TokenService.useDownload(isPremium)) {
-        toast.success("Wallpaper downloaded!");
-      }
+      const imageUrl = getImageUrl();
+      const filename = `wallpaper-${wallpaper.id}.png`;
+      await WallpaperService.downloadWallpaper(imageUrl, filename);
     } catch (error) {
       console.error('Download error:', error);
       toast.error("Failed to download wallpaper");
@@ -98,51 +81,25 @@ export const WallpaperCard = ({
 
   const handleShare = async () => {
     try {
-      // For mobile sharing
+      const imageUrl = getImageUrl();
+      
       if (navigator.share) {
-        if (wallpaper.type === 'video') {
-          try {
-            const response = await fetch(wallpaper.url);
-            const blob = await response.blob();
-            const file = new File([blob], `wallpaper-${wallpaper.id}.mp4`, { type: 'video/mp4' });
-            await navigator.share({
-              title: 'Amazing AI Wallpaper',
-              text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-              files: [file]
-            });
-          } catch {
-            await navigator.share({
-              title: 'Amazing AI Wallpaper',
-              text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-              url: wallpaper.url,
-            });
-          }
-        } else if (wallpaper.url.startsWith('data:')) {
-          // For base64 images, we need to convert to blob first
-          const response = await fetch(wallpaper.url);
-          const blob = await response.blob();
-          const file = new File([blob], `wallpaper-${wallpaper.id}.png`, { type: 'image/png' });
-          await navigator.share({
-            title: 'Amazing AI Wallpaper',
-            text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-            files: [file]
-          });
-        } else {
-          await navigator.share({
-            title: 'Amazing AI Wallpaper',
-            text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-            url: wallpaper.url,
-          });
-        }
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `wallpaper-${wallpaper.id}.png`, { type: 'image/png' });
+        
+        await navigator.share({
+          title: 'Amazing AI Wallpaper',
+          text: `Check out this wallpaper: "${wallpaper.prompt}"`,
+          files: [file]
+        });
         toast.success("Wallpaper shared!");
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
         toast.success("Wallpaper info copied to clipboard!");
       }
     } catch (error) {
       console.error('Share error:', error);
-      // Fallback for share cancellation or error
       try {
         await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
         toast.success("Wallpaper info copied to clipboard!");
@@ -153,7 +110,6 @@ export const WallpaperCard = ({
   };
 
   const handleApplyWallpaper = async () => {
-    // Check if user can apply
     if (!TokenService.canDownload(isPremium)) {
       toast.error("No applies remaining today! You'll get 5 fresh applies tomorrow.");
       onPremiumRequired?.();
@@ -161,15 +117,22 @@ export const WallpaperCard = ({
     }
 
     try {
-      // Use download token for apply action
-      if (TokenService.useDownload(isPremium)) {
-        // For Android/iOS, this would integrate with native wallpaper APIs
-        // For now, we'll download and show instructions
-        await handleDownload();
-        toast.success("Wallpaper ready! Set it manually in your device settings.", {
-          duration: 5000,
-          description: "Go to Settings > Display > Wallpaper to apply"
-        });
+      const imageUrl = getImageUrl();
+      const filename = `wallpaper-${wallpaper.id}.png`;
+      
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+        await WallpaperService.setAsWallpaper(imageUrl, filename);
+        if (TokenService.useDownload(isPremium)) {
+          // Token consumed
+        }
+      } else {
+        // For web, just download
+        if (TokenService.useDownload(isPremium)) {
+          await WallpaperService.downloadWallpaper(imageUrl, filename);
+          toast.info("Set the wallpaper manually in your device settings", {
+            duration: 5000,
+          });
+        }
       }
     } catch (error) {
       console.error('Apply wallpaper error:', error);
@@ -201,28 +164,14 @@ export const WallpaperCard = ({
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gradient-primary/20 animate-pulse rounded-t-lg" />
           )}
-          {wallpaper.type === 'video' ? (
-            <video
-              src={wallpaper.url}
-              className={`w-full h-full object-cover transition-all duration-500 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              } ${isHovered ? 'scale-105' : 'scale-100'}`}
-              onLoadedData={() => setImageLoaded(true)}
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-          ) : (
-            <img
-              src={wallpaper.url}
-              alt={wallpaper.prompt}
-              className={`w-full h-full object-cover transition-all duration-500 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              } ${isHovered ? 'scale-105' : 'scale-100'}`}
-              onLoad={() => setImageLoaded(true)}
-            />
-          )}
+          <img
+            src={getImageUrl()}
+            alt={wallpaper.prompt}
+            className={`w-full h-full object-cover transition-all duration-500 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            } ${isHovered ? 'scale-105' : 'scale-100'}`}
+            onLoad={() => setImageLoaded(true)}
+          />
           
           {/* Overlay with actions */}
           <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${

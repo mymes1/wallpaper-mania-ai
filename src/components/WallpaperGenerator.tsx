@@ -1,32 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Video, Coins, Download } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Coins, Download, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
-import { runwayMLVideoService } from "@/services/RunwayMLVideoService";
 import { TokenService } from "@/services/TokenService";
-import { ApiKeyModal } from "@/components/ApiKeyModal";
+import { WallpaperService } from "@/services/WallpaperService";
+import { Capacitor } from "@capacitor/core";
 
 interface GeneratedWallpaper {
   id: string;
-  url: string;
+  base64: string; // Store as base64 for persistence
   prompt: string;
   orientation: "portrait" | "landscape";
-  type: "image" | "video";
   createdAt: Date;
-  isPremium?: boolean;
 }
 
 export const WallpaperGenerator = () => {
   const [prompt, setPrompt] = useState("");
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
-  const [generationType, setGenerationType] = useState<"image" | "video">("image");
   const [isGenerating, setIsGenerating] = useState(false);
-const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
-const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
 
   const promptSuggestions = [
     "Mystical forest with glowing mushrooms",
@@ -37,13 +33,24 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
     "Minimalist nature landscape"
   ];
 
+  // Load saved wallpaper on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("currentWallpaper");
+    if (saved) {
+      try {
+        setGeneratedWallpaper(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load saved wallpaper:", e);
+      }
+    }
+  }, []);
+
   const generateWallpaper = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a prompt to generate a wallpaper");
       return;
     }
 
-    // Check tokens for generation (image or video)
     if (!TokenService.canGenerateImage(false)) {
       toast.error("Not enough tokens! You need 50 tokens per generation. You'll get 500 fresh tokens tomorrow.");
       return;
@@ -51,57 +58,73 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
     setIsGenerating(true);
     try {
-      let contentUrl: string;
-      
-      if (generationType === "video") {
-        // Consume tokens for video generation
-        if (!TokenService.useTokensForImage(false)) {
-          toast.error("Failed to use tokens. Please try again.");
-          return;
-        }
-        // Use RunwayML video generation - supports both orientations
-        toast.info("🎬 Starting video generation... This may take a few minutes.");
-        contentUrl = await runwayMLVideoService.generateVideo(prompt, orientation === "portrait" ? "portrait" : "landscape");
-      } else {
-        // Use tokens for image generation
-        if (!TokenService.useTokensForImage(false)) {
-          toast.error("Failed to use tokens. Please try again.");
-          return;
-        }
-        contentUrl = await generateImage(prompt, orientation);
+      if (!TokenService.useTokensForImage(false)) {
+        toast.error("Failed to use tokens. Please try again.");
+        return;
       }
+
+      const imageUrl = await generateImage(prompt, orientation);
+      
+      // Convert to base64 for persistent storage
+      const base64 = await WallpaperService.imageUrlToBase64(imageUrl);
       
       const newWallpaper: GeneratedWallpaper = {
         id: Date.now().toString(),
-        url: contentUrl,
+        base64,
         prompt,
-        orientation: generationType === "video" ? orientation : orientation,
-        type: generationType,
+        orientation,
         createdAt: new Date()
       };
 
       setGeneratedWallpaper(newWallpaper);
       
-      // Save to gallery (localStorage for demo)
+      // Save current wallpaper
+      localStorage.setItem("currentWallpaper", JSON.stringify(newWallpaper));
+      
+      // Save to gallery
       const existingWallpapers = JSON.parse(localStorage.getItem("wallpapers") || "[]");
       existingWallpapers.unshift(newWallpaper);
       localStorage.setItem("wallpapers", JSON.stringify(existingWallpapers));
       
-      const successMessage = generationType === "video" 
-        ? "🎬 Video wallpaper generated successfully!" 
-        : "🎨 Wallpaper generated successfully!";
-      toast.success(successMessage);
+      toast.success("🎨 Wallpaper generated successfully!");
     } catch (error) {
       console.error("Generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(`Failed to generate wallpaper: ${errorMessage}`);
-      if (generationType === "video" && /API key|Authorization|Bearer/i.test(errorMessage)) {
-        setIsApiKeyModalOpen(true);
-      }
     } finally {
       setIsGenerating(false);
     }
   };
+
+  const handleDownload = async () => {
+    if (!generatedWallpaper) return;
+
+    if (!TokenService.canDownload(false)) {
+      toast.error("No downloads remaining today! You'll get 5 fresh downloads tomorrow.");
+      return;
+    }
+    
+    if (!TokenService.useDownload(false)) {
+      toast.error("Failed to use download. Please try again.");
+      return;
+    }
+
+    const dataUrl = WallpaperService.base64ToDataUrl(generatedWallpaper.base64);
+    const filename = `wallpaper-${generatedWallpaper.id}.png`;
+    
+    await WallpaperService.downloadWallpaper(dataUrl, filename);
+  };
+
+  const handleSetWallpaper = async () => {
+    if (!generatedWallpaper) return;
+
+    const dataUrl = WallpaperService.base64ToDataUrl(generatedWallpaper.base64);
+    const filename = `wallpaper-${generatedWallpaper.id}.png`;
+    
+    await WallpaperService.setAsWallpaper(dataUrl, filename);
+  };
+
+  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   return (
     <div className="space-y-6">
@@ -141,63 +164,30 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
             />
           </div>
 
-          {/* Generation Type Selection */}
+          {/* Orientation Selection */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Generation Type</label>
+            <label className="text-sm font-medium mb-2 block">Orientation</label>
             <div className="flex gap-2">
               <Button
-                variant={generationType === "image" ? "default" : "outline"}
+                variant={orientation === "portrait" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setGenerationType("image")}
+                onClick={() => setOrientation("portrait")}
                 className="flex items-center gap-2 transition-all duration-300"
               >
-                <Sparkles className="w-4 h-4" />
-                Image
-                <Badge variant="secondary" className="ml-1 text-xs px-1">
-                  50 tokens
-                </Badge>
+                <Smartphone className="w-4 h-4" />
+                Portrait (9:16)
               </Button>
               <Button
-                variant={generationType === "video" ? "default" : "outline"}
+                variant={orientation === "landscape" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setGenerationType("video")}
-                className="flex items-center gap-2 transition-all duration-300 relative"
+                onClick={() => setOrientation("landscape")}
+                className="flex items-center gap-2 transition-all duration-300"
               >
-                <Video className="w-4 h-4" />
-                Video
-                <Badge variant="secondary" className="ml-1 text-xs px-1">
-                  50 tokens
-                </Badge>
+                <Monitor className="w-4 h-4" />
+                Landscape (16:9)
               </Button>
             </div>
           </div>
-
-{/* Orientation Selection - Only show for images */}
-          {generationType === "image" && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Orientation</label>
-              <div className="flex gap-2">
-                <Button
-                  variant={orientation === "portrait" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setOrientation("portrait")}
-                  className="flex items-center gap-2 transition-all duration-300"
-                >
-                  <Smartphone className="w-4 h-4" />
-                  Portrait (9:16)
-                </Button>
-                <Button
-                  variant={orientation === "landscape" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setOrientation("landscape")}
-                  className="flex items-center gap-2 transition-all duration-300"
-                >
-                  <Monitor className="w-4 h-4" />
-                  Landscape (16:9)
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Generate Button */}
           <Button
@@ -209,21 +199,12 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
             {isGenerating ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                {generationType === "video" ? "Creating Video Magic..." : "Generating Magic..."}
+                Generating Magic...
               </>
             ) : (
               <>
-                {generationType === "video" ? (
-                  <>
-                    <Video className="w-5 h-5 mr-2" />
-                    Generate Video Wallpaper
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Generate Wallpaper
-                  </>
-                )}
+                <Sparkles className="w-5 h-5 mr-2" />
+                Generate Wallpaper
               </>
             )}
           </Button>
@@ -254,80 +235,50 @@ const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Your Generated Wallpaper</h3>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-gradient-primary text-white">
-                  {generatedWallpaper.type === "video" ? (
-                    <>
-                      <Video className="w-3 h-3 mr-1" />
-                      Video
-                    </>
-                  ) : (
-                    generatedWallpaper.orientation
-                  )}
-                </Badge>
-              </div>
+              <Badge className="bg-gradient-primary text-white">
+                <ImageIcon className="w-3 h-3 mr-1" />
+                {generatedWallpaper.orientation}
+              </Badge>
             </div>
-            <div className="relative group">
-              {generatedWallpaper.type === "video" ? (
-                <video
-                  src={generatedWallpaper.url}
-                  className="w-full rounded-lg shadow-card transition-transform duration-300 group-hover:scale-[1.02]"
-                  style={{
-                    aspectRatio: generatedWallpaper.orientation === "portrait" ? "9/16" : "16/9",
-                    maxHeight: "300px",
-                    objectFit: "cover"
-                  }}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                />
-              ) : (
-                <img
-                  src={generatedWallpaper.url}
-                  alt={generatedWallpaper.prompt}
-                  className="w-full rounded-lg shadow-card transition-transform duration-300 group-hover:scale-[1.02]"
-                  style={{
-                    aspectRatio: generatedWallpaper.orientation === "portrait" ? "9/16" : "16/9",
-                    maxHeight: "300px",
-                    objectFit: "cover"
-                  }}
-                />
-              )}
-              
-              {/* Download Button Overlay */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+            
+            <div className="relative">
+              <img
+                src={WallpaperService.base64ToDataUrl(generatedWallpaper.base64)}
+                alt={generatedWallpaper.prompt}
+                className="w-full rounded-lg shadow-card"
+                style={{
+                  aspectRatio: generatedWallpaper.orientation === "portrait" ? "9/16" : "16/9",
+                  maxHeight: "300px",
+                  objectFit: "cover"
+                }}
+              />
+            </div>
+
+            <p className="text-sm text-muted-foreground">"{generatedWallpaper.prompt}"</p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                className="flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+              {isNativeAndroid && (
                 <Button
-                  variant="secondary"
-                  onClick={() => {
-                    if (!TokenService.canDownload(false)) {
-                      toast.error("No downloads remaining today! You'll get 5 fresh downloads tomorrow.");
-                      return;
-                    }
-                    
-                    if (TokenService.useDownload(false)) {
-                      const link = document.createElement('a');
-                      link.href = generatedWallpaper.url;
-                      link.download = `wallpaper-${generatedWallpaper.id}.${generatedWallpaper.type === 'video' ? 'mp4' : 'png'}`;
-                      link.click();
-                      toast.success("Wallpaper downloaded!");
-                    }
-                  }}
-                  className="animate-scale-in"
+                  onClick={handleSetWallpaper}
+                  className="flex-1 bg-gradient-primary text-white"
                 >
-                  Download
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  Set as Wallpaper
                 </Button>
-              </div>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground animate-slide-up">"{generatedWallpaper.prompt}"</p>
           </div>
         </Card>
       )}
-      <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-        onApiKeySet={(key) => runwayMLVideoService.setApiKey(key)}
-      />
     </div>
   );
 };

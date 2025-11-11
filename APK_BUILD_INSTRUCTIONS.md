@@ -93,6 +93,7 @@ The app includes these permissions in `android/app/src/main/AndroidManifest.xml`
 - `INTERNET` - for AI image generation
 - `WRITE_EXTERNAL_STORAGE` - for saving wallpapers
 - `READ_EXTERNAL_STORAGE` - for reading saved wallpapers
+- `SET_WALLPAPER` - for setting device wallpaper (Android)
 
 ### Troubleshooting
 
@@ -127,21 +128,23 @@ The app includes these permissions in `android/app/src/main/AndroidManifest.xml`
 5. Submit for review
 
 ### Key Features Included
-- ✅ AI wallpaper generation with multiple APIs
+- ✅ AI wallpaper generation using Lovable AI
 - ✅ Token-based usage system (500 daily tokens for free users)
-- ✅ Premium features (unlimited tokens, video generation)
 - ✅ Gallery with search and filtering
-- ✅ Download and share functionality with usage limits
-- ✅ Apply wallpaper feature with usage tracking
+- ✅ Download functionality with usage limits
+- ✅ Native wallpaper setting (Android)
+- ✅ Share wallpapers with other apps
 - ✅ Favorites system
 - ✅ Responsive design for all screen sizes
-- ✅ Persistent storage using base64 data URLs
+- ✅ Persistent storage using base64 encoding
 
 ## Fixed Issues in This Version
-- ✅ **Gallery black images**: Fixed by using base64 data URLs instead of temporary blob URLs
+- ✅ **Images not persisting**: Fixed by storing base64-encoded images instead of blob URLs
+- ✅ **Blank images after page reload**: Resolved with persistent base64 storage
 - ✅ **Download/Apply limits**: Implemented token-based system with daily limits
-- ✅ **Share functionality**: Enhanced with mobile-native sharing and clipboard fallback
-- ✅ **APK configuration**: Updated with proper app ID and mobile optimizations
+- ✅ **Android wallpaper setting**: Added native wallpaper application feature
+- ✅ **Share functionality**: Enhanced with native sharing via Capacitor
+- ✅ **Removed video generation**: Simplified to image-only generation
 
 ## Final Notes
 - **First APK build may take 10-15 minutes**

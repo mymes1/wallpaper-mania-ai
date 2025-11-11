@@ -8,7 +8,8 @@ import { toast } from "sonner";
 
 interface Wallpaper {
   id: string;
-  url: string;
+  url?: string; // Legacy support
+  base64?: string; // New format
   prompt: string;
   orientation: "portrait" | "landscape";
   type?: "image" | "video";
