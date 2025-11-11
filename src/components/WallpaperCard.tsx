@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { TokenService } from "@/services/TokenService";
 import { WallpaperService } from "@/services/WallpaperService";
 import { Capacitor } from "@capacitor/core";
+import { ShareDialog } from "@/components/ShareDialog";
 
 interface Wallpaper {
   id: string;
@@ -49,6 +50,7 @@ export const WallpaperCard = ({
 }: WallpaperCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const getImageUrl = () => {
     if (wallpaper.base64) {
@@ -79,34 +81,8 @@ export const WallpaperCard = ({
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const imageUrl = getImageUrl();
-      
-      if (navigator.share) {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `wallpaper-${wallpaper.id}.png`, { type: 'image/png' });
-        
-        await navigator.share({
-          title: 'Amazing AI Wallpaper',
-          text: `Check out this wallpaper: "${wallpaper.prompt}"`,
-          files: [file]
-        });
-        toast.success("Wallpaper shared!");
-      } else {
-        await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
-        toast.success("Wallpaper info copied to clipboard!");
-      }
-    } catch (error) {
-      console.error('Share error:', error);
-      try {
-        await navigator.clipboard.writeText(`Check out this wallpaper: "${wallpaper.prompt}"`);
-        toast.success("Wallpaper info copied to clipboard!");
-      } catch {
-        toast.error("Unable to share wallpaper");
-      }
-    }
+  const handleShare = () => {
+    setShowShareDialog(true);
   };
 
   const handleApplyWallpaper = async () => {
@@ -259,6 +235,18 @@ export const WallpaperCard = ({
           </div>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        wallpaper={{
+          id: wallpaper.id,
+          base64: wallpaper.base64,
+          url: wallpaper.url,
+          prompt: wallpaper.prompt
+        }}
+      />
 
       {/* Card Content */}
       <div className="p-4 space-y-2">

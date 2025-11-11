@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Smartphone, Monitor, Coins, Download, ImageIcon } from "lucide-react";
+import { Loader2, Sparkles, Smartphone, Monitor, Coins, Download, ImageIcon, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateImage } from "@/services/ImageService";
 import { TokenService } from "@/services/TokenService";
 import { WallpaperService } from "@/services/WallpaperService";
 import { Capacitor } from "@capacitor/core";
+import { ShareDialog } from "@/components/ShareDialog";
 
 interface GeneratedWallpaper {
   id: string;
@@ -23,6 +24,7 @@ export const WallpaperGenerator = () => {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedWallpaper, setGeneratedWallpaper] = useState<GeneratedWallpaper | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const promptSuggestions = [
     "Mystical forest with glowing mushrooms",
@@ -257,19 +259,25 @@ export const WallpaperGenerator = () => {
             <p className="text-sm text-muted-foreground">"{generatedWallpaper.prompt}"</p>
 
             {/* Action Buttons */}
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={handleDownload}
                 variant="outline"
-                className="flex-1"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
+              <Button
+                onClick={() => setShowShareDialog(true)}
+                variant="outline"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
               {isNativeAndroid && (
                 <Button
                   onClick={handleSetWallpaper}
-                  className="flex-1 bg-gradient-primary text-white"
+                  className="col-span-2 bg-gradient-primary text-white"
                 >
                   <ImageIcon className="w-4 h-4 mr-2" />
                   Set as Wallpaper
@@ -278,6 +286,19 @@ export const WallpaperGenerator = () => {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Share Dialog */}
+      {generatedWallpaper && (
+        <ShareDialog
+          isOpen={showShareDialog}
+          onClose={() => setShowShareDialog(false)}
+          wallpaper={{
+            id: generatedWallpaper.id,
+            base64: generatedWallpaper.base64,
+            prompt: generatedWallpaper.prompt
+          }}
+        />
       )}
     </div>
   );
